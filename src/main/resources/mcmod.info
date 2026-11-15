@@ -1,14 +1,14 @@
 [
 {
-  "modid": "examplemod",
-  "name": "Example Mod",
-  "description": "Example placeholder mod.",
+  "modid": "livingworld",
+  "name": "Living World",
+  "description": "A living world simulation and A-Life framework for Minecraft 1.12.2.",
   "version": "${version}",
   "mcversion": "${mcversion}",
   "url": "",
   "updateUrl": "",
-  "authorList": ["ExampleDude"],
-  "credits": "The Forge and FML guys, for making this example",
+  "authorList": ["0blivar3"],
+  "credits": "",
   "logoFile": "",
   "screenshots": [],
   "dependencies": []
