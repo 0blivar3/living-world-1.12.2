@@ -5,6 +5,7 @@ import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 
 import java.util.List;
 import java.util.UUID;
@@ -59,7 +60,10 @@ public final class AnimalHerdBehavior
         UUID leaderId = herd.getLeaderId();
         if (leaderId == null || leaderId.equals(animal.getUniqueID())) return;
 
-        Entity leader = world.getEntityFromUuid(leaderId);
+        // In 1.12.2, UUID lookup is exposed by WorldServer rather than World.
+        Entity leader = world instanceof WorldServer
+                ? ((WorldServer) world).getEntityFromUuid(leaderId)
+                : null;
         if (leader instanceof EntityAnimal && !leader.isDead)
         {
             double distance = animal.getDistanceSq(leader);
