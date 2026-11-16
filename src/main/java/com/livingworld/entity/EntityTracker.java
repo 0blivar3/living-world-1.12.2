@@ -129,11 +129,18 @@ public class EntityTracker
         {
             if (entity instanceof net.minecraft.entity.passive.EntityAnimal)
             {
+                net.minecraft.entity.passive.EntityAnimal animal =
+                        (net.minecraft.entity.passive.EntityAnimal) entity;
+                EntityData animalData = state.entities.get(entity.getUniqueID());
+                if (animalData != null)
+                {
+                    AnimalHuntBehavior.update(animal, animalData, world, worldTime);
+                }
+
                 AnimalHerd herd = findHerd(state.herds.values(), entity.getUniqueID());
                 if (herd != null)
                 {
-                    AnimalHerdBehavior.update(
-                            (net.minecraft.entity.passive.EntityAnimal) entity, herd, world, worldTime);
+                    AnimalHerdBehavior.update(animal, herd, world, worldTime);
                 }
             }
         }
