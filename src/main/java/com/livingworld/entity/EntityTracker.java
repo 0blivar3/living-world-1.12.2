@@ -30,6 +30,7 @@ public class EntityTracker
         private ALifeWorldData savedData;
         private long ticksUntilUpdate;
         private long lastHerdUpdateWorldTime = Long.MIN_VALUE;
+        private long lastOfflineBreedingWorldTime = Long.MIN_VALUE;
     }
 
     private final Map<Integer, DimensionState> dimensions = new HashMap<Integer, DimensionState>();
@@ -113,6 +114,13 @@ public class EntityTracker
         }
 
         OfflineSimulator.simulate(state.entities.values(), worldTime);
+
+        if (state.lastOfflineBreedingWorldTime == Long.MIN_VALUE
+                || worldTime - state.lastOfflineBreedingWorldTime >= 1200L)
+        {
+            OfflineSimulator.simulateBreeding(state.entities, worldTime);
+            state.lastOfflineBreedingWorldTime = worldTime;
+        }
 
         if (state.lastHerdUpdateWorldTime == Long.MIN_VALUE
                 || worldTime - state.lastHerdUpdateWorldTime >= HERD_UPDATE_INTERVAL)
