@@ -12,7 +12,6 @@ import java.util.UUID;
  */
 public final class OfflineSimulator
 {
-    private static final long BREEDING_INTERVAL = 1200L;
     private static final long BREEDING_COOLDOWN = 6000L;
     private static final int MIN_HUNGER = 75;
     private static final int BREEDING_COST = 25;
@@ -39,8 +38,7 @@ public final class OfflineSimulator
      */
     public static void simulateBreeding(Map<UUID, EntityData> entities, long worldTime)
     {
-        if (entities == null || entities.isEmpty()
-                || worldTime % BREEDING_INTERVAL != 0L)
+        if (entities == null || entities.isEmpty())
         {
             return;
         }
