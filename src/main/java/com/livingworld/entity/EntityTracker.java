@@ -142,6 +142,7 @@ public class EntityTracker
                 EntityData animalData = state.entities.get(entity.getUniqueID());
                 if (animalData != null)
                 {
+                    AnimalDailyRoutine.update(animal, animalData);
                     AnimalHuntBehavior.update(animal, animalData, world, worldTime);
                     AnimalBreedingBehavior.update(
                             animal, animalData, state.entities, world, worldTime);
