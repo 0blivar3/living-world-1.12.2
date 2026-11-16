@@ -133,7 +133,7 @@ public class EntityTracker
                 if (herd != null)
                 {
                     AnimalHerdBehavior.update(
-                            (net.minecraft.entity.passive.EntityAnimal) entity, herd, world);
+                            (net.minecraft.entity.passive.EntityAnimal) entity, herd, world, worldTime);
                 }
             }
         }
