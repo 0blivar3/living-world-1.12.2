@@ -29,6 +29,7 @@ public class EntityData
     private boolean animal;
     private boolean villager;
     private int hunger = 100;
+    private AnimalDiet diet = AnimalDiet.UNKNOWN;
 
     private String villagerActivity = VillagerBehavior.WANDERING;
     private int villagerProfession = -1;
@@ -61,6 +62,11 @@ public class EntityData
                 : 0.0F;
         this.animal = entity instanceof EntityAnimal;
         this.villager = entity instanceof EntityVillager;
+
+        if (animal)
+        {
+            diet = AnimalDiet.fromEntityType(entityType);
+        }
 
         if (entity instanceof EntityVillager)
         {
@@ -233,6 +239,7 @@ public class EntityData
         tag.setBoolean("Animal", animal);
         tag.setBoolean("Villager", villager);
         tag.setInteger("Hunger", hunger);
+        tag.setString("AnimalDiet", diet.name());
 
         tag.setString("VillagerActivity", villagerActivity);
         tag.setInteger("VillagerProfession", villagerProfession);
@@ -263,6 +270,22 @@ public class EntityData
         data.animal = tag.getBoolean("Animal");
         data.villager = tag.getBoolean("Villager");
         data.hunger = tag.hasKey("Hunger") ? tag.getInteger("Hunger") : 100;
+        if (tag.hasKey("AnimalDiet"))
+        {
+            try
+            {
+                data.diet = AnimalDiet.valueOf(tag.getString("AnimalDiet"));
+            }
+            catch (IllegalArgumentException ignored)
+            {
+                data.diet = AnimalDiet.UNKNOWN;
+            }
+        }
+        else if (data.animal)
+        {
+            // Compatibility with worlds saved before dietary categories existed.
+            data.diet = AnimalDiet.fromEntityType(data.entityType);
+        }
 
         data.villagerActivity = tag.hasKey("VillagerActivity")
                 ? tag.getString("VillagerActivity")
@@ -298,6 +321,7 @@ public class EntityData
     public boolean isAnimal() { return animal; }
     public boolean isVillager() { return villager; }
     public int getHunger() { return hunger; }
+    public AnimalDiet getDiet() { return diet; }
     public String getVillagerActivity() { return villagerActivity; }
     public int getVillagerProfession() { return villagerProfession; }
     public boolean hasHome() { return hasHome; }
