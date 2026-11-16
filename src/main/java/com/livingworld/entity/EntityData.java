@@ -112,9 +112,12 @@ public class EntityData
             return;
         }
 
+        long elapsed = worldTime - lastSimulationWorldTime;
+
         if (villager)
         {
             villagerActivity = VillagerBehavior.getActivity(worldTime);
+            simulateVillagerMovement(elapsed);
         }
 
         if (!animal)
@@ -123,7 +126,6 @@ public class EntityData
             return;
         }
 
-        long elapsed = worldTime - lastSimulationWorldTime;
         long intervals = elapsed / HUNGER_INTERVAL;
 
         if (intervals <= 0)
@@ -166,6 +168,55 @@ public class EntityData
         float appliedHealth = Math.min(health, living.getMaxHealth());
         living.setHealth(appliedHealth);
         return true;
+    }
+
+
+    /**
+     * Moves the abstract villager position toward its current offline destination.
+     * No chunks or Minecraft entities are loaded for this calculation.
+     */
+    private void simulateVillagerMovement(long elapsedTicks)
+    {
+        if (elapsedTicks <= 0L)
+        {
+            return;
+        }
+
+        int targetX;
+        int targetY;
+        int targetZ;
+
+        if (VillagerBehavior.WORKING.equals(villagerActivity) && hasWorkstation)
+        {
+            targetX = workstationX;
+            targetY = workstationY;
+            targetZ = workstationZ;
+        }
+        else if (VillagerBehavior.SLEEPING.equals(villagerActivity) && hasHome)
+        {
+            targetX = homeX;
+            targetY = homeY;
+            targetZ = homeZ;
+        }
+        else
+        {
+            return;
+        }
+
+        double dx = targetX + 0.5D - x;
+        double dy = targetY - y;
+        double dz = targetZ + 0.5D - z;
+        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (distance < 0.5D)
+        {
+            return;
+        }
+
+        double maxTravel = Math.min(distance, elapsedTicks * 0.035D);
+        double scale = maxTravel / distance;
+        x += dx * scale;
+        y += dy * scale;
+        z += dz * scale;
     }
 
     public NBTTagCompound writeToNBT()
