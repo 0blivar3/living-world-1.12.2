@@ -4,8 +4,9 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityVillager;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 
 import java.util.UUID;
 
@@ -35,6 +36,10 @@ public class EntityData
     private int homeX;
     private int homeY;
     private int homeZ;
+    private boolean hasWorkstation;
+    private int workstationX;
+    private int workstationY;
+    private int workstationZ;
 
     private long lastUpdateWorldTime;
     private long lastSimulationWorldTime;
@@ -45,7 +50,7 @@ public class EntityData
         this.entityType = entityType;
     }
 
-    public void update(Entity entity, long worldTime, int dimension)
+    public void update(Entity entity, long worldTime, int dimension, World world)
     {
         this.dimension = dimension;
         this.x = entity.posX;
@@ -74,6 +79,19 @@ public class EntityData
             else
             {
                 hasHome = false;
+            }
+
+            BlockPos workstation = VillagerWorkstationFinder.findNearest(villagerEntity, world);
+            if (workstation != null)
+            {
+                hasWorkstation = true;
+                workstationX = workstation.getX();
+                workstationY = workstation.getY();
+                workstationZ = workstation.getZ();
+            }
+            else
+            {
+                hasWorkstation = false;
             }
         }
 
@@ -171,6 +189,10 @@ public class EntityData
         tag.setInteger("HomeX", homeX);
         tag.setInteger("HomeY", homeY);
         tag.setInteger("HomeZ", homeZ);
+        tag.setBoolean("HasWorkstation", hasWorkstation);
+        tag.setInteger("WorkstationX", workstationX);
+        tag.setInteger("WorkstationY", workstationY);
+        tag.setInteger("WorkstationZ", workstationZ);
 
         tag.setLong("LastUpdate", lastUpdateWorldTime);
         tag.setLong("LastSimulation", lastSimulationWorldTime);
@@ -201,6 +223,10 @@ public class EntityData
         data.homeX = tag.getInteger("HomeX");
         data.homeY = tag.getInteger("HomeY");
         data.homeZ = tag.getInteger("HomeZ");
+        data.hasWorkstation = tag.getBoolean("HasWorkstation");
+        data.workstationX = tag.getInteger("WorkstationX");
+        data.workstationY = tag.getInteger("WorkstationY");
+        data.workstationZ = tag.getInteger("WorkstationZ");
 
         data.lastUpdateWorldTime = tag.getLong("LastUpdate");
         data.lastSimulationWorldTime = tag.hasKey("LastSimulation")
@@ -227,5 +253,9 @@ public class EntityData
     public int getHomeX() { return homeX; }
     public int getHomeY() { return homeY; }
     public int getHomeZ() { return homeZ; }
+    public boolean hasWorkstation() { return hasWorkstation; }
+    public int getWorkstationX() { return workstationX; }
+    public int getWorkstationY() { return workstationY; }
+    public int getWorkstationZ() { return workstationZ; }
     public long getLastUpdateWorldTime() { return lastUpdateWorldTime; }
 }
