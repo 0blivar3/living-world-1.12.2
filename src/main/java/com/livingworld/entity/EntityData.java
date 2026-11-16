@@ -80,6 +80,31 @@ public class EntityData
         lastSimulationWorldTime += intervals * HUNGER_INTERVAL;
     }
 
+    /**
+     * Applies the simulated health to the real entity when it is loaded again.
+     * Returns false when the offline simulation has killed the entity.
+     */
+    public boolean applyOfflineState(Entity entity)
+    {
+        if (!(entity instanceof EntityLivingBase))
+        {
+            return true;
+        }
+
+        EntityLivingBase living = (EntityLivingBase) entity;
+        if (health <= 0.0F)
+        {
+            living.setHealth(0.0F);
+            living.setDead();
+            loaded = false;
+            return false;
+        }
+
+        float appliedHealth = Math.min(health, living.getMaxHealth());
+        living.setHealth(appliedHealth);
+        return true;
+    }
+
     public NBTTagCompound writeToNBT()
     {
         NBTTagCompound tag = new NBTTagCompound();
