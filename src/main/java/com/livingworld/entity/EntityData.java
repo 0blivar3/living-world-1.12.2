@@ -3,6 +3,7 @@ package com.livingworld.entity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityAnimal;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.nbt.NBTTagCompound;
 
 import java.util.UUID;
@@ -24,7 +25,9 @@ public class EntityData
     private float health;
     private boolean loaded;
     private boolean animal;
+    private boolean villager;
     private int hunger = 100;
+    private String villagerActivity = VillagerBehavior.WANDERING;
     private long lastUpdateWorldTime;
     private long lastSimulationWorldTime;
 
@@ -44,19 +47,38 @@ public class EntityData
                 ? ((EntityLivingBase) entity).getHealth()
                 : 0.0F;
         this.animal = entity instanceof EntityAnimal;
+        this.villager = entity instanceof EntityVillager;
+
+        if (villager)
+        {
+            villagerActivity = VillagerBehavior.getActivity(worldTime);
+        }
+
         this.loaded = true;
         this.lastUpdateWorldTime = worldTime;
         this.lastSimulationWorldTime = worldTime;
     }
 
     /**
-     * Advances the abstract survival state while the entity is not loaded.
-     * One hunger point is consumed every 2,400 world ticks.
+     * Advances the abstract state while the entity is not loaded.
+     * Animals consume one hunger point every 2,400 world ticks.
+     * Villagers update their daily activity according to the world time.
      */
     public void simulateOffline(long worldTime)
     {
-        if (loaded || !animal || worldTime <= lastSimulationWorldTime)
+        if (loaded || worldTime <= lastSimulationWorldTime)
         {
+            return;
+        }
+
+        if (villager)
+        {
+            villagerActivity = VillagerBehavior.getActivity(worldTime);
+        }
+
+        if (!animal)
+        {
+            lastSimulationWorldTime = worldTime;
             return;
         }
 
@@ -117,7 +139,9 @@ public class EntityData
         tag.setFloat("Health", health);
         tag.setBoolean("Loaded", loaded);
         tag.setBoolean("Animal", animal);
+        tag.setBoolean("Villager", villager);
         tag.setInteger("Hunger", hunger);
+        tag.setString("VillagerActivity", villagerActivity);
         tag.setLong("LastUpdate", lastUpdateWorldTime);
         tag.setLong("LastSimulation", lastSimulationWorldTime);
         return tag;
@@ -134,7 +158,11 @@ public class EntityData
         data.health = tag.getFloat("Health");
         data.loaded = false;
         data.animal = tag.getBoolean("Animal");
+        data.villager = tag.getBoolean("Villager");
         data.hunger = tag.hasKey("Hunger") ? tag.getInteger("Hunger") : 100;
+        data.villagerActivity = tag.hasKey("VillagerActivity")
+                ? tag.getString("VillagerActivity")
+                : VillagerBehavior.WANDERING;
         data.lastUpdateWorldTime = tag.getLong("LastUpdate");
         data.lastSimulationWorldTime = tag.hasKey("LastSimulation")
                 ? tag.getLong("LastSimulation")
@@ -152,6 +180,8 @@ public class EntityData
     public boolean isLoaded() { return loaded; }
     public void setLoaded(boolean loaded) { this.loaded = loaded; }
     public boolean isAnimal() { return animal; }
+    public boolean isVillager() { return villager; }
     public int getHunger() { return hunger; }
+    public String getVillagerActivity() { return villagerActivity; }
     public long getLastUpdateWorldTime() { return lastUpdateWorldTime; }
 }
