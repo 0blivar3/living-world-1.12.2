@@ -122,6 +122,23 @@ public class EntityTracker
             state.savedData.setHerds(state.herds.values());
         }
 
+        // Keep the center current so followers can react to the group's movement.
+        HerdManager.refreshCenters(state.entities, state.herds, worldTime);
+
+        for (Entity entity : world.loadedEntityList)
+        {
+            if (entity instanceof net.minecraft.entity.passive.EntityAnimal)
+            {
+                AnimalHerd herd = findHerd(state.herds.values(), entity.getUniqueID());
+                if (herd != null)
+                {
+                    AnimalHerdBehavior.update(
+                            (net.minecraft.entity.passive.EntityAnimal) entity, herd, world);
+                }
+            }
+        }
+
+        state.savedData.setHerds(state.herds.values());
         state.savedData.setEntities(state.entities.values());
     }
 
@@ -150,6 +167,18 @@ public class EntityTracker
 
         dimensions.put(dimension, state);
         return state;
+    }
+
+    private AnimalHerd findHerd(Collection<AnimalHerd> herds, UUID memberId)
+    {
+        for (AnimalHerd herd : herds)
+        {
+            if (herd.getMembers().contains(memberId))
+            {
+                return herd;
+            }
+        }
+        return null;
     }
 
     public EntityData getEntity(int dimension, UUID id)
