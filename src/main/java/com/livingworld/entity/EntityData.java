@@ -86,7 +86,7 @@ public class EntityData
      */
     public boolean applyOfflineState(Entity entity)
     {
-        if (!(entity instanceof EntityLivingBase))
+        if (!animal || !(entity instanceof EntityLivingBase))
         {
             return true;
         }
