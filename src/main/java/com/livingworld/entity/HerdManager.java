@@ -194,6 +194,16 @@ public final class HerdManager
         }
     }
 
+    public static void refreshCenters(Map<UUID, EntityData> entities,
+                                      Map<UUID, AnimalHerd> herds,
+                                      long worldTime)
+    {
+        for (AnimalHerd herd : herds.values())
+        {
+            updateCenter(herd, entities, worldTime);
+        }
+    }
+
     private static boolean isHerdAnimal(EntityData data, int dimension)
     {
         if (data == null || !data.isAnimal() || data.getHealth() <= 0.0F
