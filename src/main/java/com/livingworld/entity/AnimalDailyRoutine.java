@@ -3,26 +3,33 @@ package com.livingworld.entity;
 import net.minecraft.entity.ai.EntityAIBase;
 import net.minecraft.entity.passive.EntityAnimal;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
+
 /**
  * Adds a simple daily rest schedule to passive herbivores and omnivores.
  *
- * Resting is implemented as a high-priority movement task so that ordinary
- * wandering is suppressed at night, while higher-priority panic and mating
- * tasks can still interrupt it.
+ * Resting is implemented as a movement task so ordinary wandering is
+ * suppressed at night, while higher-priority panic and mating tasks can
+ * still interrupt it.
  */
 public final class AnimalDailyRoutine
 {
-    private static final String REST_TASK_ADDED_KEY = "LivingWorldRestTaskAdded";
     private static final int REST_START = 13000;
     private static final int REST_END = 23000;
     private static final int SCHEDULE_VARIATION = 1200;
+
+    // AI tasks are runtime objects and must be reinstalled after an entity reload.
+    private static final Set<EntityAnimal> INSTALLED =
+            Collections.newSetFromMap(new WeakHashMap<EntityAnimal, Boolean>());
 
     private AnimalDailyRoutine()
     {
     }
 
     /**
-     * Installs the rest task once for each loaded animal.
+     * Installs the rest task once for each currently loaded animal instance.
      */
     public static void update(EntityAnimal animal, EntityData data)
     {
@@ -32,19 +39,14 @@ public final class AnimalDailyRoutine
             return;
         }
 
-        if (animal.getEntityData().getBoolean(REST_TASK_ADDED_KEY))
-        {
-            return;
-        }
-
         if (data.getDiet() == AnimalDiet.CARNIVORE
-                || data.getDiet() == AnimalDiet.UNKNOWN)
+                || data.getDiet() == AnimalDiet.UNKNOWN
+                || !INSTALLED.add(animal))
         {
             return;
         }
 
         animal.tasks.addTask(5, new NightRestTask(animal, data));
-        animal.getEntityData().setBoolean(REST_TASK_ADDED_KEY, true);
     }
 
     /**
