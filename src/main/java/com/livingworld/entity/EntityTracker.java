@@ -74,13 +74,24 @@ public class EntityTracker
                 continue;
             }
 
-            // A previously unloaded entity has accumulated offline changes.
-            if (!data.isLoaded() && !data.applyOfflineState(entity))
+            // Advance hunger for continuously loaded animals as well as offline entities.
+            if (data.isLoaded())
+            {
+                data.simulateOffline(worldTime);
+            }
+
+            // Apply any simulated starvation damage before refreshing the snapshot.
+            if (!data.applyOfflineState(entity))
             {
                 continue;
             }
 
             data.update(entity, worldTime, dimension, world);
+            if (entity instanceof net.minecraft.entity.passive.EntityAnimal)
+            {
+                AnimalFoodBehavior.update(
+                        (net.minecraft.entity.passive.EntityAnimal) entity, data, world);
+            }
             if (entity instanceof net.minecraft.entity.passive.EntityVillager)
             {
                 VillagerBehavior.updateLoadedVillager(
