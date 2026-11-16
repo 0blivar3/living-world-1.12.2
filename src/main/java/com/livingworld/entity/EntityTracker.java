@@ -75,7 +75,7 @@ public class EntityTracker
                 continue;
             }
 
-            data.update(entity, worldTime, dimension);
+            data.update(entity, worldTime, dimension, world);
             loadedNow.add(id);
         }
 
