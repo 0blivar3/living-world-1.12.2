@@ -64,7 +64,7 @@ public class EntityTracker
             {
                 data = new EntityData(id, type);
                 state.entities.put(id, data);
-                data.update(entity, worldTime, dimension);
+                data.update(entity, worldTime, dimension, world);
                 loadedNow.add(id);
                 continue;
             }
