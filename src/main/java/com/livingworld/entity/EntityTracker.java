@@ -65,6 +65,11 @@ public class EntityTracker
                 data = new EntityData(id, type);
                 state.entities.put(id, data);
                 data.update(entity, worldTime, dimension, world);
+                if (entity instanceof net.minecraft.entity.passive.EntityVillager)
+                {
+                    VillagerBehavior.updateLoadedVillager(
+                            (net.minecraft.entity.passive.EntityVillager) entity, data, world);
+                }
                 loadedNow.add(id);
                 continue;
             }
@@ -76,6 +81,11 @@ public class EntityTracker
             }
 
             data.update(entity, worldTime, dimension, world);
+            if (entity instanceof net.minecraft.entity.passive.EntityVillager)
+            {
+                VillagerBehavior.updateLoadedVillager(
+                        (net.minecraft.entity.passive.EntityVillager) entity, data, world);
+            }
             loadedNow.add(id);
         }
 
