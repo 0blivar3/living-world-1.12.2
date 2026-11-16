@@ -332,6 +332,13 @@ public class EntityData
             hunger = Math.min(100, hunger + amount);
         }
     }
+    public void consumeHunger(int amount)
+    {
+        if (amount > 0)
+        {
+            hunger = Math.max(0, hunger - amount);
+        }
+    }
     public AnimalDiet getDiet() { return diet; }
     public String getVillagerActivity() { return villagerActivity; }
     public int getVillagerProfession() { return villagerProfession; }
