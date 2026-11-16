@@ -1,8 +1,8 @@
 package com.livingworld.entity;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityAnimal;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.nbt.NBTTagCompound;
 
