@@ -1,7 +1,14 @@
 package com.livingworld.entity;
 
+import net.minecraft.entity.monster.EntityMob;
+import net.minecraft.entity.passive.EntityVillager;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.world.World;
+
+import java.util.List;
+
 /**
- * Provides a lightweight daily schedule for villagers in the offline simulation.
+ * Daily schedule and loaded-world behavior for vanilla villagers.
  */
 public final class VillagerBehavior
 {
@@ -9,6 +16,10 @@ public final class VillagerBehavior
     public static final String WORKING = "WORKING";
     public static final String SOCIALIZING = "SOCIALIZING";
     public static final String WANDERING = "WANDERING";
+    public static final String FLEEING = "FLEEING";
+
+    private static final double THREAT_RADIUS = 12.0D;
+    private static final double FLEE_DISTANCE = 12.0D;
 
     private VillagerBehavior()
     {
@@ -16,7 +27,6 @@ public final class VillagerBehavior
 
     /**
      * Determines a villager's current activity from the Minecraft day cycle.
-     * The supplied time is measured in world ticks.
      */
     public static String getActivity(long worldTime)
     {
@@ -38,5 +48,92 @@ public final class VillagerBehavior
         }
 
         return WANDERING;
+    }
+
+    /**
+     * Applies schedule destinations and threat reactions to a loaded villager.
+     * This does not disable vanilla AI: the navigator receives a destination,
+     * while vanilla behavior remains responsible for path execution.
+     */
+    public static void updateLoadedVillager(EntityVillager villager, EntityData data, World world)
+    {
+        if (villager == null || data == null || world == null || world.isRemote
+                || villager.isDead)
+        {
+            return;
+        }
+
+        EntityMob threat = findNearestThreat(villager, world);
+        if (threat != null)
+        {
+            fleeFrom(villager, threat);
+            return;
+        }
+
+        String activity = data.getVillagerActivity();
+        if (WORKING.equals(activity) && data.hasWorkstation())
+        {
+            villager.getNavigator().tryMoveToXYZ(
+                    data.getWorkstationX() + 0.5D,
+                    data.getWorkstationY(),
+                    data.getWorkstationZ() + 0.5D,
+                    0.8D);
+        }
+        else if (SLEEPING.equals(activity) && data.hasHome())
+        {
+            villager.getNavigator().tryMoveToXYZ(
+                    data.getHomeX() + 0.5D,
+                    data.getHomeY(),
+                    data.getHomeZ() + 0.5D,
+                    0.7D);
+        }
+    }
+
+    private static EntityMob findNearestThreat(EntityVillager villager, World world)
+    {
+        AxisAlignedBB area = villager.getEntityBoundingBox().grow(
+                THREAT_RADIUS, 6.0D, THREAT_RADIUS);
+        List<EntityMob> threats = world.getEntitiesWithinAABB(EntityMob.class, area);
+
+        EntityMob nearest = null;
+        double nearestDistance = THREAT_RADIUS * THREAT_RADIUS;
+
+        for (EntityMob mob : threats)
+        {
+            if (mob.isDead)
+            {
+                continue;
+            }
+
+            double distance = villager.getDistanceSq(mob);
+            if (distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                nearest = mob;
+            }
+        }
+
+        return nearest;
+    }
+
+    private static void fleeFrom(EntityVillager villager, EntityMob threat)
+    {
+        double dx = villager.posX - threat.posX;
+        double dz = villager.posZ - threat.posZ;
+        double length = Math.sqrt(dx * dx + dz * dz);
+
+        if (length < 0.001D)
+        {
+            double angle = Math.toRadians(villager.rotationYaw + 180.0F);
+            dx = Math.cos(angle);
+            dz = Math.sin(angle);
+            length = 1.0D;
+        }
+
+        double targetX = villager.posX + (dx / length) * FLEE_DISTANCE;
+        double targetZ = villager.posZ + (dz / length) * FLEE_DISTANCE;
+
+        villager.getNavigator().clearPath();
+        villager.getNavigator().tryMoveToXYZ(targetX, villager.posY, targetZ, 1.25D);
     }
 }
