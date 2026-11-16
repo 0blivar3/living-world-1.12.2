@@ -57,6 +57,15 @@ public final class AnimalHerdBehavior
             return;
         }
 
+        // Resting animals stay with the group unless a threat interrupts their rest.
+        EntityData animalData = null;
+        // The daily routine is checked through the entity's current schedule.
+        if (AnimalDailyRoutine.isRestTime(animal))
+        {
+            animal.getNavigator().clearPath();
+            return;
+        }
+
         UUID leaderId = herd.getLeaderId();
         if (leaderId == null || leaderId.equals(animal.getUniqueID())) return;
 
