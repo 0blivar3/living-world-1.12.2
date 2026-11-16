@@ -67,6 +67,7 @@ public class EntityTracker
             data.update(entity, world.getTotalWorldTime(), dimension);
         }
 
+        OfflineSimulator.simulate(state.entities.values(), world.getTotalWorldTime());
         state.savedData.setEntities(state.entities.values());
     }
 
