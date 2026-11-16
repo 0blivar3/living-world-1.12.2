@@ -135,6 +135,8 @@ public class EntityTracker
                 if (animalData != null)
                 {
                     AnimalHuntBehavior.update(animal, animalData, world, worldTime);
+                    AnimalBreedingBehavior.update(
+                            animal, animalData, state.entities, world, worldTime);
                 }
 
                 AnimalHerd herd = findHerd(state.herds.values(), entity.getUniqueID());
