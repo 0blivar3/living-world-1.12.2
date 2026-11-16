@@ -10,7 +10,9 @@ import net.minecraft.world.storage.MapStorage;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -46,28 +48,47 @@ public class EntityTracker
         }
 
         state.ticksUntilUpdate = UPDATE_INTERVAL;
-        markDimensionUnloaded(state);
+        long worldTime = world.getTotalWorldTime();
+        Set<UUID> loadedNow = new HashSet<UUID>();
 
         for (Entity entity : world.loadedEntityList)
         {
+            UUID id = entity.getUniqueID();
             ResourceLocation registryName = EntityList.getKey(entity);
             String type = registryName == null
                     ? entity.getClass().getName()
                     : registryName.toString();
 
-            UUID id = entity.getUniqueID();
             EntityData data = state.entities.get(id);
-
             if (data == null)
             {
                 data = new EntityData(id, type);
                 state.entities.put(id, data);
+                data.update(entity, worldTime, dimension);
+                loadedNow.add(id);
+                continue;
             }
 
-            data.update(entity, world.getTotalWorldTime(), dimension);
+            // A previously unloaded entity has accumulated offline changes.
+            if (!data.isLoaded() && !data.applyOfflineState(entity))
+            {
+                continue;
+            }
+
+            data.update(entity, worldTime, dimension);
+            loadedNow.add(id);
         }
 
-        OfflineSimulator.simulate(state.entities.values(), world.getTotalWorldTime());
+        // Only entities absent from the current loaded-entity list are offline.
+        for (EntityData data : state.entities.values())
+        {
+            if (!loadedNow.contains(data.getId()))
+            {
+                data.setLoaded(false);
+            }
+        }
+
+        OfflineSimulator.simulate(state.entities.values(), worldTime);
         state.savedData.setEntities(state.entities.values());
     }
 
@@ -95,14 +116,6 @@ public class EntityTracker
 
         dimensions.put(dimension, state);
         return state;
-    }
-
-    private void markDimensionUnloaded(DimensionState state)
-    {
-        for (EntityData data : state.entities.values())
-        {
-            data.setLoaded(false);
-        }
     }
 
     public EntityData getEntity(int dimension, UUID id)
