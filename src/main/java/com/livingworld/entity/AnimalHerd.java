@@ -23,6 +23,10 @@ public class AnimalHerd
     private double centerY;
     private double centerZ;
     private long lastUpdateWorldTime;
+    private long alarmUntilWorldTime;
+    private double threatX;
+    private double threatY;
+    private double threatZ;
 
     public AnimalHerd(UUID id, String entityType, int dimension)
     {
@@ -60,6 +64,23 @@ public class AnimalHerd
         lastUpdateWorldTime = worldTime;
     }
 
+    public void raiseAlarm(double x, double y, double z, long untilWorldTime)
+    {
+        threatX = x;
+        threatY = y;
+        threatZ = z;
+        alarmUntilWorldTime = Math.max(alarmUntilWorldTime, untilWorldTime);
+    }
+
+    public boolean isAlarmActive(long worldTime)
+    {
+        return worldTime < alarmUntilWorldTime;
+    }
+
+    public double getThreatX() { return threatX; }
+    public double getThreatY() { return threatY; }
+    public double getThreatZ() { return threatZ; }
+
     public NBTTagCompound writeToNBT()
     {
         NBTTagCompound tag = new NBTTagCompound();
@@ -70,6 +91,10 @@ public class AnimalHerd
         tag.setDouble("CenterY", centerY);
         tag.setDouble("CenterZ", centerZ);
         tag.setLong("LastUpdate", lastUpdateWorldTime);
+        tag.setLong("AlarmUntil", alarmUntilWorldTime);
+        tag.setDouble("ThreatX", threatX);
+        tag.setDouble("ThreatY", threatY);
+        tag.setDouble("ThreatZ", threatZ);
         if (leaderId != null)
         {
             tag.setString("Leader", leaderId.toString());
@@ -95,6 +120,10 @@ public class AnimalHerd
         herd.centerY = tag.getDouble("CenterY");
         herd.centerZ = tag.getDouble("CenterZ");
         herd.lastUpdateWorldTime = tag.getLong("LastUpdate");
+        herd.alarmUntilWorldTime = tag.getLong("AlarmUntil");
+        herd.threatX = tag.getDouble("ThreatX");
+        herd.threatY = tag.getDouble("ThreatY");
+        herd.threatZ = tag.getDouble("ThreatZ");
 
         if (tag.hasKey("Leader"))
         {
