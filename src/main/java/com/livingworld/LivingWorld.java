@@ -5,6 +5,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.common.MinecraftForge;
+import com.livingworld.core.ALifeManager;
 import org.apache.logging.log4j.Logger;
 
 @Mod(modid = LivingWorld.MODID, name = LivingWorld.NAME, version = LivingWorld.VERSION)
@@ -15,6 +17,7 @@ public class LivingWorld
     public static final String VERSION = "1.0";
 
     private static Logger logger;
+    private ALifeManager alifeManager;
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event)
@@ -25,6 +28,9 @@ public class LivingWorld
     @EventHandler
     public void init(FMLInitializationEvent event)
     {
+        alifeManager = new ALifeManager();
+        MinecraftForge.EVENT_BUS.register(alifeManager);
+
         logger.info("Living World initialized.");
         logger.info("DIRT BLOCK >> {}", Blocks.DIRT.getRegistryName());
     }
