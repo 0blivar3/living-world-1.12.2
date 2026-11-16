@@ -101,9 +101,13 @@ public class EntityData
             }
         }
 
+        boolean firstUpdate = lastUpdateWorldTime == 0L && lastSimulationWorldTime == 0L;
         this.loaded = true;
         this.lastUpdateWorldTime = worldTime;
-        this.lastSimulationWorldTime = worldTime;
+        if (firstUpdate)
+        {
+            this.lastSimulationWorldTime = worldTime;
+        }
     }
 
     /**
@@ -113,14 +117,14 @@ public class EntityData
      */
     public void simulateOffline(long worldTime)
     {
-        if (loaded || worldTime <= lastSimulationWorldTime)
+        if (worldTime <= lastSimulationWorldTime)
         {
             return;
         }
 
         long elapsed = worldTime - lastSimulationWorldTime;
 
-        if (villager)
+        if (!loaded && villager)
         {
             villagerActivity = VillagerBehavior.getActivity(worldTime);
             simulateVillagerMovement(elapsed);
@@ -321,6 +325,13 @@ public class EntityData
     public boolean isAnimal() { return animal; }
     public boolean isVillager() { return villager; }
     public int getHunger() { return hunger; }
+    public void feed(int amount)
+    {
+        if (amount > 0)
+        {
+            hunger = Math.min(100, hunger + amount);
+        }
+    }
     public AnimalDiet getDiet() { return diet; }
     public String getVillagerActivity() { return villagerActivity; }
     public int getVillagerProfession() { return villagerProfession; }
