@@ -139,15 +139,6 @@ public class EntityData
             simulateVillagerMovement(elapsed);
         }
 
-        if (growingAge < 0)
-        {
-            growingAge = (int) Math.min(0L, growingAge + elapsed);
-        }
-        else if (growingAge > 0)
-        {
-            growingAge = (int) Math.max(0L, growingAge - elapsed);
-        }
-
         if (!animal)
         {
             lastSimulationWorldTime = worldTime;
@@ -159,6 +150,16 @@ public class EntityData
         if (intervals <= 0)
         {
             return;
+        }
+
+        long simulatedTicks = intervals * HUNGER_INTERVAL;
+        if (growingAge < 0)
+        {
+            growingAge = (int) Math.min(0L, growingAge + simulatedTicks);
+        }
+        else if (growingAge > 0)
+        {
+            growingAge = (int) Math.max(0L, growingAge - simulatedTicks);
         }
 
         long hungerToConsume = Math.min(intervals, hunger);
