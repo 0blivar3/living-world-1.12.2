@@ -3,6 +3,7 @@ package com.livingworld.entity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.passive.EntityAnimal;
+import net.minecraft.entity.EntityAgeable;
 import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
@@ -30,6 +31,9 @@ public class EntityData
     private boolean villager;
     private int hunger = 100;
     private AnimalDiet diet = AnimalDiet.UNKNOWN;
+    private int growingAge;
+    private long breedingCooldownUntil;
+    private boolean virtual;
 
     private String villagerActivity = VillagerBehavior.WANDERING;
     private int villagerProfession = -1;
@@ -62,6 +66,11 @@ public class EntityData
                 : 0.0F;
         this.animal = entity instanceof EntityAnimal;
         this.villager = entity instanceof EntityVillager;
+        this.virtual = false;
+        if (entity instanceof EntityAgeable)
+        {
+            growingAge = ((EntityAgeable) entity).getGrowingAge();
+        }
 
         if (animal)
         {
@@ -128,6 +137,15 @@ public class EntityData
         {
             villagerActivity = VillagerBehavior.getActivity(worldTime);
             simulateVillagerMovement(elapsed);
+        }
+
+        if (growingAge < 0)
+        {
+            growingAge = (int) Math.min(0L, growingAge + elapsed);
+        }
+        else if (growingAge > 0)
+        {
+            growingAge = (int) Math.max(0L, growingAge - elapsed);
         }
 
         if (!animal)
@@ -244,6 +262,9 @@ public class EntityData
         tag.setBoolean("Villager", villager);
         tag.setInteger("Hunger", hunger);
         tag.setString("AnimalDiet", diet.name());
+        tag.setInteger("GrowingAge", growingAge);
+        tag.setLong("BreedingCooldownUntil", breedingCooldownUntil);
+        tag.setBoolean("Virtual", virtual);
 
         tag.setString("VillagerActivity", villagerActivity);
         tag.setInteger("VillagerProfession", villagerProfession);
@@ -274,6 +295,9 @@ public class EntityData
         data.animal = tag.getBoolean("Animal");
         data.villager = tag.getBoolean("Villager");
         data.hunger = tag.hasKey("Hunger") ? tag.getInteger("Hunger") : 100;
+        data.growingAge = tag.hasKey("GrowingAge") ? tag.getInteger("GrowingAge") : 0;
+        data.breedingCooldownUntil = tag.getLong("BreedingCooldownUntil");
+        data.virtual = tag.getBoolean("Virtual");
         if (tag.hasKey("AnimalDiet"))
         {
             try
@@ -340,6 +364,31 @@ public class EntityData
         }
     }
     public AnimalDiet getDiet() { return diet; }
+    public int getGrowingAge() { return growingAge; }
+    public void setGrowingAge(int age) { growingAge = age; }
+    public long getBreedingCooldownUntil() { return breedingCooldownUntil; }
+    public void setBreedingCooldownUntil(long time) { breedingCooldownUntil = time; }
+    public boolean isVirtual() { return virtual; }
+    public void setVirtual(boolean virtual) { this.virtual = virtual; }
+
+    public static EntityData createVirtualOffspring(EntityData parent, long worldTime)
+    {
+        EntityData child = new EntityData(UUID.randomUUID(), parent.entityType);
+        child.dimension = parent.dimension;
+        child.x = parent.x;
+        child.y = parent.y;
+        child.z = parent.z;
+        child.health = 10.0F;
+        child.animal = true;
+        child.diet = parent.diet;
+        child.hunger = 75;
+        child.growingAge = -24000;
+        child.virtual = true;
+        child.loaded = false;
+        child.lastUpdateWorldTime = worldTime;
+        child.lastSimulationWorldTime = worldTime;
+        return child;
+    }
     public String getVillagerActivity() { return villagerActivity; }
     public int getVillagerProfession() { return villagerProfession; }
     public boolean hasHome() { return hasHome; }
