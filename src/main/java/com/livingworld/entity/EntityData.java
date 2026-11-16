@@ -2,6 +2,7 @@ package com.livingworld.entity;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.nbt.NBTTagCompound;
 
 import java.util.UUID;
 
@@ -40,53 +41,44 @@ public class EntityData
         this.lastUpdateWorldTime = worldTime;
     }
 
-    public UUID getId()
+    public NBTTagCompound writeToNBT()
     {
-        return id;
+        NBTTagCompound tag = new NBTTagCompound();
+        tag.setString("Id", id.toString());
+        tag.setString("Type", entityType);
+        tag.setInteger("Dimension", dimension);
+        tag.setDouble("X", x);
+        tag.setDouble("Y", y);
+        tag.setDouble("Z", z);
+        tag.setFloat("Health", health);
+        tag.setBoolean("Loaded", loaded);
+        tag.setLong("LastUpdate", lastUpdateWorldTime);
+        return tag;
     }
 
-    public String getEntityType()
+    public static EntityData readFromNBT(NBTTagCompound tag)
     {
-        return entityType;
+        UUID id = UUID.fromString(tag.getString("Id"));
+        EntityData data = new EntityData(id, tag.getString("Type"));
+        data.dimension = tag.getInteger("Dimension");
+        data.x = tag.getDouble("X");
+        data.y = tag.getDouble("Y");
+        data.z = tag.getDouble("Z");
+        data.health = tag.getFloat("Health");
+        // An entity is not considered loaded merely because its record was saved.
+        data.loaded = false;
+        data.lastUpdateWorldTime = tag.getLong("LastUpdate");
+        return data;
     }
 
-    public int getDimension()
-    {
-        return dimension;
-    }
-
-    public double getX()
-    {
-        return x;
-    }
-
-    public double getY()
-    {
-        return y;
-    }
-
-    public double getZ()
-    {
-        return z;
-    }
-
-    public float getHealth()
-    {
-        return health;
-    }
-
-    public boolean isLoaded()
-    {
-        return loaded;
-    }
-
-    public void setLoaded(boolean loaded)
-    {
-        this.loaded = loaded;
-    }
-
-    public long getLastUpdateWorldTime()
-    {
-        return lastUpdateWorldTime;
-    }
+    public UUID getId() { return id; }
+    public String getEntityType() { return entityType; }
+    public int getDimension() { return dimension; }
+    public double getX() { return x; }
+    public double getY() { return y; }
+    public double getZ() { return z; }
+    public float getHealth() { return health; }
+    public boolean isLoaded() { return loaded; }
+    public void setLoaded(boolean loaded) { this.loaded = loaded; }
+    public long getLastUpdateWorldTime() { return lastUpdateWorldTime; }
 }
