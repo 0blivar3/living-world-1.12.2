@@ -4,6 +4,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityVillager;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.nbt.NBTTagCompound;
 
 import java.util.UUID;
@@ -27,7 +28,14 @@ public class EntityData
     private boolean animal;
     private boolean villager;
     private int hunger = 100;
+
     private String villagerActivity = VillagerBehavior.WANDERING;
+    private int villagerProfession = -1;
+    private boolean hasHome;
+    private int homeX;
+    private int homeY;
+    private int homeZ;
+
     private long lastUpdateWorldTime;
     private long lastSimulationWorldTime;
 
@@ -49,9 +57,24 @@ public class EntityData
         this.animal = entity instanceof EntityAnimal;
         this.villager = entity instanceof EntityVillager;
 
-        if (villager)
+        if (entity instanceof EntityVillager)
         {
+            EntityVillager villagerEntity = (EntityVillager) entity;
             villagerActivity = VillagerBehavior.getActivity(worldTime);
+            villagerProfession = villagerEntity.getProfession();
+
+            if (villagerEntity.hasHome())
+            {
+                BlockPos home = villagerEntity.getHomePosition();
+                hasHome = true;
+                homeX = home.getX();
+                homeY = home.getY();
+                homeZ = home.getZ();
+            }
+            else
+            {
+                hasHome = false;
+            }
         }
 
         this.loaded = true;
@@ -141,7 +164,14 @@ public class EntityData
         tag.setBoolean("Animal", animal);
         tag.setBoolean("Villager", villager);
         tag.setInteger("Hunger", hunger);
+
         tag.setString("VillagerActivity", villagerActivity);
+        tag.setInteger("VillagerProfession", villagerProfession);
+        tag.setBoolean("HasHome", hasHome);
+        tag.setInteger("HomeX", homeX);
+        tag.setInteger("HomeY", homeY);
+        tag.setInteger("HomeZ", homeZ);
+
         tag.setLong("LastUpdate", lastUpdateWorldTime);
         tag.setLong("LastSimulation", lastSimulationWorldTime);
         return tag;
@@ -160,9 +190,18 @@ public class EntityData
         data.animal = tag.getBoolean("Animal");
         data.villager = tag.getBoolean("Villager");
         data.hunger = tag.hasKey("Hunger") ? tag.getInteger("Hunger") : 100;
+
         data.villagerActivity = tag.hasKey("VillagerActivity")
                 ? tag.getString("VillagerActivity")
                 : VillagerBehavior.WANDERING;
+        data.villagerProfession = tag.hasKey("VillagerProfession")
+                ? tag.getInteger("VillagerProfession")
+                : -1;
+        data.hasHome = tag.getBoolean("HasHome");
+        data.homeX = tag.getInteger("HomeX");
+        data.homeY = tag.getInteger("HomeY");
+        data.homeZ = tag.getInteger("HomeZ");
+
         data.lastUpdateWorldTime = tag.getLong("LastUpdate");
         data.lastSimulationWorldTime = tag.hasKey("LastSimulation")
                 ? tag.getLong("LastSimulation")
@@ -183,5 +222,10 @@ public class EntityData
     public boolean isVillager() { return villager; }
     public int getHunger() { return hunger; }
     public String getVillagerActivity() { return villagerActivity; }
+    public int getVillagerProfession() { return villagerProfession; }
+    public boolean hasHome() { return hasHome; }
+    public int getHomeX() { return homeX; }
+    public int getHomeY() { return homeY; }
+    public int getHomeZ() { return homeZ; }
     public long getLastUpdateWorldTime() { return lastUpdateWorldTime; }
 }
