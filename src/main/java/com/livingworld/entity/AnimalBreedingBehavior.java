@@ -93,7 +93,12 @@ public final class AnimalBreedingBehavior
 
     private static boolean isCooldownComplete(EntityAnimal animal, long worldTime)
     {
+        if (!animal.getEntityData().hasKey(LAST_BREEDING_KEY))
+        {
+            return true;
+        }
+
         long lastBreeding = animal.getEntityData().getLong(LAST_BREEDING_KEY);
-        return lastBreeding == 0L || worldTime - lastBreeding >= BREEDING_COOLDOWN;
+        return worldTime - lastBreeding >= BREEDING_COOLDOWN;
     }
 }
