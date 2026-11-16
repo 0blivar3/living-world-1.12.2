@@ -21,12 +21,15 @@ import java.util.UUID;
 public class EntityTracker
 {
     private static final int UPDATE_INTERVAL = 100;
+    private static final int HERD_UPDATE_INTERVAL = 1200;
 
     private static class DimensionState
     {
         private final Map<UUID, EntityData> entities = new HashMap<UUID, EntityData>();
+        private final Map<UUID, AnimalHerd> herds = new HashMap<UUID, AnimalHerd>();
         private ALifeWorldData savedData;
         private long ticksUntilUpdate;
+        private long lastHerdUpdateWorldTime = Long.MIN_VALUE;
     }
 
     private final Map<Integer, DimensionState> dimensions = new HashMap<Integer, DimensionState>();
@@ -110,6 +113,15 @@ public class EntityTracker
         }
 
         OfflineSimulator.simulate(state.entities.values(), worldTime);
+
+        if (state.lastHerdUpdateWorldTime == Long.MIN_VALUE
+                || worldTime - state.lastHerdUpdateWorldTime >= HERD_UPDATE_INTERVAL)
+        {
+            HerdManager.update(state.entities, state.herds, dimension, worldTime);
+            state.lastHerdUpdateWorldTime = worldTime;
+            state.savedData.setHerds(state.herds.values());
+        }
+
         state.savedData.setEntities(state.entities.values());
     }
 
@@ -133,6 +145,7 @@ public class EntityTracker
         else
         {
             state.entities.putAll(state.savedData.getEntities());
+            state.herds.putAll(state.savedData.getHerds());
         }
 
         dimensions.put(dimension, state);
@@ -155,5 +168,17 @@ public class EntityTracker
     {
         DimensionState state = dimensions.get(dimension);
         return state == null ? 0 : state.entities.size();
+    }
+
+    public Collection<AnimalHerd> getAllHerds(int dimension)
+    {
+        DimensionState state = dimensions.get(dimension);
+        return state == null ? Collections.<AnimalHerd>emptyList() : state.herds.values();
+    }
+
+    public int getHerdCount(int dimension)
+    {
+        DimensionState state = dimensions.get(dimension);
+        return state == null ? 0 : state.herds.size();
     }
 }
