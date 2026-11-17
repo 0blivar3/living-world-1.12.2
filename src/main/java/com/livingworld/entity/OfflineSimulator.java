@@ -152,7 +152,8 @@ public final class OfflineSimulator
 
         for (EntityData data : snapshot)
         {
-            if (!data.isVirtual() || data.getDimension() != dimension)
+            if (!data.isVirtual() || data.getDimension() != dimension
+                    || data.getHealth() <= 0.0F)
             {
                 continue;
             }
