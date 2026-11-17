@@ -32,8 +32,9 @@ public class EntityTracker
 
     private static class DimensionState
     {
-        private final Map<UUID, EntityData> entities = new HashMap<UUID, EntityData>();
-        private final Map<UUID, AnimalHerd> herds = new HashMap<UUID, AnimalHerd>();
+        // Share the maps owned by WorldSavedData to avoid duplicate HashMap storage.
+        private Map<UUID, EntityData> entities;
+        private Map<UUID, AnimalHerd> herds;
         private ALifeWorldData savedData;
         private long ticksUntilUpdate;
         private long lastHerdUpdateWorldTime = Long.MIN_VALUE;
@@ -206,8 +207,8 @@ public class EntityTracker
             }
         }
 
-        state.savedData.setHerds(state.herds.values());
-        state.savedData.setEntities(state.entities.values());
+        // The maps are shared with WorldSavedData; only mark them dirty.
+        state.savedData.markSimulationDataDirty();
     }
 
     private boolean isTrackedEntity(Entity entity)
@@ -233,11 +234,12 @@ public class EntityTracker
             state.savedData = new ALifeWorldData();
             storage.setData(ALifeWorldData.DATA_NAME, state.savedData);
         }
-        else
-        {
-            state.entities.putAll(state.savedData.getEntities());
-            state.herds.putAll(state.savedData.getHerds());
         }
+
+        // Keep one authoritative copy of each map. EntityData and AnimalHerd
+        // instances are mutable, so the tracker and WorldSavedData can share them.
+        state.entities = state.savedData.getEntities();
+        state.herds = state.savedData.getHerds();
 
         dimensions.put(dimension, state);
         return state;
