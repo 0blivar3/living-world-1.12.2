@@ -177,6 +177,7 @@ public final class AnimalNaturalForagingBehavior
         private BlockPos findFood()
         {
             BlockPos origin = animal.getPosition();
+            BlockPos.MutableBlockPos candidate = new BlockPos.MutableBlockPos();
             BlockPos nearest = null;
             double nearestDistance = SEARCH_RADIUS * SEARCH_RADIUS;
 
@@ -193,7 +194,7 @@ public final class AnimalNaturalForagingBehavior
                             continue;
                         }
 
-                        BlockPos candidate = origin.add(x, y, z);
+                        candidate.setPos(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
                         if (!animal.world.isBlockLoaded(candidate)
                                 || !isFood(animal, animal.world.getBlockState(candidate)))
                         {
@@ -207,7 +208,7 @@ public final class AnimalNaturalForagingBehavior
                         if (distance < nearestDistance)
                         {
                             nearestDistance = distance;
-                            nearest = candidate;
+                            nearest = new BlockPos(candidate);
                         }
                     }
                 }
