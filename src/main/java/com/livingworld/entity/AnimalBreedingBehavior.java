@@ -17,6 +17,7 @@ public final class AnimalBreedingBehavior
     private static final int HUNGER_COST = 25;
     private static final long BREEDING_COOLDOWN = 6000L;
     private static final String LAST_BREEDING_KEY = "LivingWorldLastBreeding";
+    private static final String LAST_SEARCH_KEY = "LivingWorldLastBreedSearch";
 
     private AnimalBreedingBehavior()
     {
@@ -39,6 +40,13 @@ public final class AnimalBreedingBehavior
             return;
         }
 
+        long lastSearch = animal.getEntityData().getLong(LAST_SEARCH_KEY);
+        if (worldTime - lastSearch < 200L)
+        {
+            return;
+        }
+        animal.getEntityData().setLong(LAST_SEARCH_KEY, worldTime);
+
         EntityAnimal partner = null;
         EntityData partnerData = null;
         double nearestDistance = SEARCH_RADIUS * SEARCH_RADIUS;
@@ -52,6 +60,12 @@ public final class AnimalBreedingBehavior
             }
 
             EntityAnimal candidate = (EntityAnimal) entity;
+            // Only the lower UUID initiates a pair search, avoiding duplicate
+            // scans and preventing both partners from starting the same pairing.
+            if (animal.getUniqueID().compareTo(candidate.getUniqueID()) >= 0)
+            {
+                continue;
+            }
             EntityData candidateData = trackedEntities.get(candidate.getUniqueID());
             if (!candidate.isEntityAlive() || candidate.getGrowingAge() != 0
                     || candidate.isInLove() || candidate.getClass() != animal.getClass()
