@@ -144,6 +144,7 @@ public class EntityTracker
                 {
                     AnimalDailyRoutine.update(animal, animalData);
                     AnimalForagingBehavior.update(animal, animalData);
+                    AnimalNaturalForagingBehavior.update(animal, animalData);
                     AnimalHuntBehavior.update(animal, animalData, world, worldTime);
                     AnimalBreedingBehavior.update(
                             animal, animalData, state.entities, world, worldTime);
