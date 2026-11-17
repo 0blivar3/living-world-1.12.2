@@ -110,6 +110,14 @@ public final class VillagerBehavior
         double targetX = villager.posX + (dx / length) * FLEE_DISTANCE;
         double targetZ = villager.posZ + (dz / length) * FLEE_DISTANCE;
 
+        // Do not ask pathfinding to navigate into an unloaded chunk.
+        net.minecraft.util.math.BlockPos destination =
+                new net.minecraft.util.math.BlockPos(targetX, villager.posY, targetZ);
+        if (!villager.world.isBlockLoaded(destination))
+        {
+            return;
+        }
+
         villager.getNavigator().clearPath();
         villager.getNavigator().tryMoveToXYZ(targetX, villager.posY, targetZ, 1.25D);
     }
