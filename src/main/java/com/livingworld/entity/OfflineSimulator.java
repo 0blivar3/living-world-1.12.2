@@ -96,6 +96,10 @@ public final class OfflineSimulator
 
                 first.consumeHunger(BREEDING_HUNGER_COST);
                 second.consumeHunger(BREEDING_HUNGER_COST);
+                // Mirror vanilla's post-breeding age as well as the persisted
+                // A-Life cooldown, so both systems agree when the chunk reloads.
+                first.setGrowingAge((int) BREEDING_COOLDOWN);
+                second.setGrowingAge((int) BREEDING_COOLDOWN);
                 first.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
                 second.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
 
