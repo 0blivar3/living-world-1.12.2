@@ -95,9 +95,9 @@ public final class ThreatIndex
 
     private static final class Cell
     {
-        private final int x;
-        private final int y;
-        private final int z;
+        private int x;
+        private int y;
+        private int z;
 
         private Cell(int x, int y, int z)
         {
