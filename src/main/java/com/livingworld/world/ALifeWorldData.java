@@ -107,6 +107,14 @@ public class ALifeWorldData extends WorldSavedData
         markDirty();
     }
 
+    /**
+     * Marks the shared simulation maps as changed so Minecraft persists them.
+     */
+    public void markSimulationDataDirty()
+    {
+        markDirty();
+    }
+
     public Map<UUID, EntityData> getEntities()
     {
         return entities;
