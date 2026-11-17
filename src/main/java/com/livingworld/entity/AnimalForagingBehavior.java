@@ -78,6 +78,7 @@ public final class AnimalForagingBehavior
         private final EntityAnimal animal;
         private final EntityData data;
         private EntityItem target;
+        private int searchCooldown;
 
         private ForageTask(EntityAnimal animal, EntityData data)
         {
@@ -91,9 +92,17 @@ public final class AnimalForagingBehavior
         {
             if (!canForage())
             {
+                searchCooldown = 0;
                 return false;
             }
 
+            if (searchCooldown > 0)
+            {
+                searchCooldown--;
+                return false;
+            }
+
+            searchCooldown = 20;
             target = findFood();
             return target != null;
         }
