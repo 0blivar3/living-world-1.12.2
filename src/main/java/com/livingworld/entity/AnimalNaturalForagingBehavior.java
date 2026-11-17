@@ -20,7 +20,7 @@ import java.util.WeakHashMap;
  */
 public final class AnimalNaturalForagingBehavior
 {
-    private static final int SEARCH_RADIUS = 8;
+    private static final int SEARCH_RADIUS = 6;
     private static final int HUNGER_THRESHOLD = 75;
     private static final int FOOD_VALUE = 30;
     private static final double EAT_DISTANCE_SQ = 2.25D;
@@ -81,6 +81,9 @@ public final class AnimalNaturalForagingBehavior
         {
             this.animal = animal;
             this.data = data;
+            // Spread initial scans across time instead of making every animal
+            // search for food on the same AI tick.
+            this.searchCooldown = Math.floorMod(animal.getUniqueID().hashCode(), 200);
             setMutexBits(1);
         }
 
@@ -100,7 +103,7 @@ public final class AnimalNaturalForagingBehavior
             }
 
             // Avoid scanning the surrounding blocks every single AI tick.
-            searchCooldown = 100;
+            searchCooldown = 200;
             target = findFood();
             return target != null;
         }
