@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,22 @@ public final class HerdManager
                               long worldTime)
     {
         Set<UUID> assigned = new HashSet<UUID>();
+        Map<String, List<EntityData>> animalsByType = new HashMap<String, List<EntityData>>();
+        for (EntityData data : entities.values())
+        {
+            if (!isHerdAnimal(data, dimension))
+            {
+                continue;
+            }
+
+            List<EntityData> sameType = animalsByType.get(data.getEntityType());
+            if (sameType == null)
+            {
+                sameType = new ArrayList<EntityData>();
+                animalsByType.put(data.getEntityType(), sameType);
+            }
+            sameType.add(data);
+        }
 
         // Keep existing herds stable, removing only members that are no longer valid.
         Iterator<Map.Entry<UUID, AnimalHerd>> herdIterator = herds.entrySet().iterator();
@@ -75,10 +92,15 @@ public final class HerdManager
             }
 
             List<EntityData> candidates = new ArrayList<EntityData>();
-            for (EntityData data : entities.values())
+            List<EntityData> sameType = animalsByType.get(herd.getEntityType());
+            if (sameType == null)
             {
-                if (assigned.contains(data.getId()) || !isHerdAnimal(data, dimension)
-                        || !herd.getEntityType().equals(data.getEntityType()))
+                continue;
+            }
+
+            for (EntityData data : sameType)
+            {
+                if (assigned.contains(data.getId()))
                 {
                     continue;
                 }
@@ -155,10 +177,14 @@ public final class HerdManager
 
                 EntityData nearest = null;
                 double nearestDistance = HERD_RADIUS * HERD_RADIUS;
-                for (EntityData candidate : unassigned)
+                List<EntityData> sameType = animalsByType.get(seed.getEntityType());
+                if (sameType == null)
                 {
-                    if (consumed.contains(candidate.getId())
-                            || !seed.getEntityType().equals(candidate.getEntityType()))
+                    break;
+                }
+                for (EntityData candidate : sameType)
+                {
+                    if (assigned.contains(candidate.getId()) || consumed.contains(candidate.getId()))
                     {
                         continue;
                     }
