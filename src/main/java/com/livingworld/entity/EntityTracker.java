@@ -168,7 +168,9 @@ public class EntityTracker
         }
 
         // One pass over loaded entities handles both animals and villagers.
-        for (Entity entity : world.loadedEntityList)
+        // Iterate over a snapshot: behavior updates below may cause entities
+        // to be added to or removed from the world's live entity list.
+        for (Entity entity : new ArrayList<Entity>(world.loadedEntityList))
         {
             if (entity.isDead)
             {
