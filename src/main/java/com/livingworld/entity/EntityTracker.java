@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -39,6 +40,12 @@ public class EntityTracker
         private long ticksUntilUpdate;
         private long lastHerdUpdateWorldTime = Long.MIN_VALUE;
         private long lastOfflineBreedingWorldTime = Long.MIN_VALUE;
+
+        // Reusable scratch collections avoid allocating large temporary
+        // collections on every simulation update.
+        private final List<Entity> loadedEntitySnapshot = new ArrayList<Entity>();
+        private final Set<UUID> loadedNow = new HashSet<UUID>();
+        private final Map<UUID, AnimalHerd> herdByMember = new HashMap<UUID, AnimalHerd>();
     }
 
     private final Map<Integer, DimensionState> dimensions = new HashMap<Integer, DimensionState>();
@@ -65,9 +72,13 @@ public class EntityTracker
         // Convert virtual offspring only in chunks that are already loaded.
         OfflineSimulator.materializeVirtualOffspring(world, state.entities.values());
 
-        Set<UUID> loadedNow = new HashSet<UUID>();
+        // Take one stable snapshot for both passes. Behavior updates may mutate
+        // the world's live entity list, so iterating the snapshot avoids CME.
+        state.loadedEntitySnapshot.clear();
+        state.loadedEntitySnapshot.addAll(world.loadedEntityList);
+        state.loadedNow.clear();
 
-        for (Entity entity : new ArrayList<Entity>(world.loadedEntityList))
+        for (Entity entity : state.loadedEntitySnapshot)
         {
             if (!isTrackedEntity(entity) || entity.isDead)
             {
@@ -159,19 +170,19 @@ public class EntityTracker
 
         // Build a direct membership index once instead of scanning every herd
         // for every loaded animal (which becomes expensive in populated worlds).
-        Map<UUID, AnimalHerd> herdByMember = new HashMap<UUID, AnimalHerd>();
+        state.herdByMember.clear();
         for (AnimalHerd herd : state.herds.values())
         {
             for (UUID memberId : herd.getMembers())
             {
-                herdByMember.put(memberId, herd);
+                state.herdByMember.put(memberId, herd);
             }
         }
 
         // One pass over loaded entities handles both animals and villagers.
         // Iterate over a snapshot: behavior updates below may cause entities
         // to be added to or removed from the world's live entity list.
-        for (Entity entity : new ArrayList<Entity>(world.loadedEntityList))
+        for (Entity entity : state.loadedEntitySnapshot)
         {
             if (entity.isDead)
             {
@@ -194,7 +205,7 @@ public class EntityTracker
                 AnimalHuntBehavior.update(animal, entityData, world, worldTime);
                 AnimalBreedingBehavior.update(animal, entityData, state.entities, world, worldTime);
 
-                AnimalHerd herd = herdByMember.get(entity.getUniqueID());
+                AnimalHerd herd = state.herdByMember.get(entity.getUniqueID());
                 if (herd != null)
                 {
                     AnimalHerdBehavior.update(animal, entityData, herd, world, worldTime);
@@ -206,6 +217,10 @@ public class EntityTracker
                         (EntityVillager) entity, entityData, world);
             }
         }
+
+        // Release entity references held by the reusable snapshot. Its backing
+        // array remains reusable without keeping unloaded entities reachable.
+        state.loadedEntitySnapshot.clear();
 
         // The maps are shared with WorldSavedData; only mark them dirty.
         state.savedData.markSimulationDataDirty();
