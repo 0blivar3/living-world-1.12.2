@@ -120,9 +120,22 @@ public final class OfflineSimulator
             return false;
         }
 
-        // Most EntityAnimal subclasses can reproduce in vanilla. Mules are the
-        // notable sterile exception; custom registered animal types are allowed.
-        return !"minecraft:mule".equals(data.getEntityType());
+        // Most EntityAnimal subclasses can reproduce in vanilla. Mules are
+        // sterile, and virtual offspring require a registered entity type so
+        // they can later be reconstructed safely.
+        if ("minecraft:mule".equals(data.getEntityType()))
+        {
+            return false;
+        }
+
+        try
+        {
+            return EntityList.isRegistered(new ResourceLocation(data.getEntityType()));
+        }
+        catch (RuntimeException exception)
+        {
+            return false;
+        }
     }
 
     private static double distanceSquared(EntityData first, EntityData second)
