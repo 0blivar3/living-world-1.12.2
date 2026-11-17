@@ -1,5 +1,6 @@
 package com.livingworld.entity;
 
+import net.minecraft.block.BlockTallGrass;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.ai.EntityAIBase;
 import net.minecraft.entity.passive.EntityAnimal;
@@ -61,7 +62,7 @@ public final class AnimalNaturalForagingBehavior
 
         if (state.getBlock() == Blocks.TALLGRASS)
         {
-            return true;
+            return state.getValue(BlockTallGrass.TYPE) != BlockTallGrass.EnumType.DEAD_BUSH;
         }
 
         return animal instanceof net.minecraft.entity.passive.EntityPig
@@ -99,7 +100,7 @@ public final class AnimalNaturalForagingBehavior
             }
 
             // Avoid scanning the surrounding blocks every single AI tick.
-            searchCooldown = 20;
+            searchCooldown = 100;
             target = findFood();
             return target != null;
         }
