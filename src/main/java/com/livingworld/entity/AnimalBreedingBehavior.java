@@ -54,15 +54,11 @@ public final class AnimalBreedingBehavior
             }
 
             EntityAnimal candidate = (EntityAnimal) entity;
+            EntityData candidateData = trackedEntities.get(candidate.getUniqueID());
             if (!candidate.isEntityAlive() || candidate.getGrowingAge() != 0
                     || candidate.isInLove() || candidate.getClass() != animal.getClass()
+                    || candidateData == null || candidateData.getHunger() < MIN_HUNGER
                     || !isCooldownComplete(candidate, candidateData, worldTime))
-            {
-                continue;
-            }
-
-            EntityData candidateData = trackedEntities.get(candidate.getUniqueID());
-            if (candidateData == null || candidateData.getHunger() < MIN_HUNGER)
             {
                 continue;
             }
