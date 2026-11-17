@@ -29,6 +29,7 @@ public enum AnimalDiet
         {
             // Animals that primarily feed on plants.
             case "cow":
+            case "mooshroom":
             case "sheep":
             case "horse":
             case "donkey":
