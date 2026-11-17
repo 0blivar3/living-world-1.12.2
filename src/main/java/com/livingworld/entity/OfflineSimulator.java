@@ -112,7 +112,7 @@ public final class OfflineSimulator
 
     private static boolean canBreed(EntityData data, long worldTime)
     {
-        if (data == null || !data.isAnimal() || data.isVirtual()
+        if (data == null || !data.isAnimal() || data.isLoaded() || data.isVirtual()
                 || data.getHealth() <= 0.0F || data.getGrowingAge() != 0
                 || data.getHunger() < MIN_BREEDING_HUNGER
                 || worldTime < data.getBreedingCooldownUntil())
