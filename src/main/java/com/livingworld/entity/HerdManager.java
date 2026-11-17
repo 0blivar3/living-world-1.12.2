@@ -33,6 +33,8 @@ public final class HerdManager
     {
         Set<UUID> assigned = new HashSet<UUID>();
         Map<String, List<EntityData>> animalsByType = new HashMap<String, List<EntityData>>();
+        Map<SpatialCell, List<EntityData>> spatialIndex =
+                new HashMap<SpatialCell, List<EntityData>>();
         for (EntityData data : entities.values())
         {
             if (!isHerdAnimal(data, dimension))
@@ -47,6 +49,15 @@ public final class HerdManager
                 animalsByType.put(data.getEntityType(), sameType);
             }
             sameType.add(data);
+
+            SpatialCell cell = SpatialCell.from(data);
+            List<EntityData> bucket = spatialIndex.get(cell);
+            if (bucket == null)
+            {
+                bucket = new ArrayList<EntityData>();
+                spatialIndex.put(cell, bucket);
+            }
+            bucket.add(data);
         }
 
         // Keep existing herds stable, removing only members that are no longer valid.
@@ -92,22 +103,31 @@ public final class HerdManager
             }
 
             List<EntityData> candidates = new ArrayList<EntityData>();
-            List<EntityData> sameType = animalsByType.get(herd.getEntityType());
-            if (sameType == null)
-            {
-                continue;
-            }
+            SpatialCell centerCell = SpatialCell.from(herd.getDimension(),
+                    herd.getEntityType(), herd.getCenterX(), herd.getCenterY(), herd.getCenterZ());
 
-            for (EntityData data : sameType)
+            // JOIN_RADIUS is 24 blocks; with 16-block cells, checking two
+            // cells in each direction covers every possible candidate.
+            for (int dx = -2; dx <= 2; dx++)
             {
-                if (assigned.contains(data.getId()))
+                for (int dy = -2; dy <= 2; dy++)
                 {
-                    continue;
-                }
-                if (distanceSq(data.getX(), data.getY(), data.getZ(),
-                        herd.getCenterX(), herd.getCenterY(), herd.getCenterZ()) <= JOIN_RADIUS * JOIN_RADIUS)
-                {
-                    candidates.add(data);
+                    for (int dz = -2; dz <= 2; dz++)
+                    {
+                        List<EntityData> bucket = spatialIndex.get(centerCell.offset(dx, dy, dz));
+                        if (bucket == null) continue;
+
+                        for (EntityData data : bucket)
+                        {
+                            if (!assigned.contains(data.getId())
+                                    && distanceSq(data.getX(), data.getY(), data.getZ(),
+                                    herd.getCenterX(), herd.getCenterY(), herd.getCenterZ())
+                                    <= JOIN_RADIUS * JOIN_RADIUS)
+                            {
+                                candidates.add(data);
+                            }
+                        }
+                    }
                 }
             }
 
@@ -177,24 +197,34 @@ public final class HerdManager
 
                 EntityData nearest = null;
                 double nearestDistance = HERD_RADIUS * HERD_RADIUS;
-                List<EntityData> sameType = animalsByType.get(seed.getEntityType());
-                if (sameType == null)
+                SpatialCell centerCell = SpatialCell.from(dimension,
+                        seed.getEntityType(), centerX, centerY, centerZ);
+                for (int dx = -1; dx <= 1; dx++)
                 {
-                    break;
-                }
-                for (EntityData candidate : sameType)
-                {
-                    if (assigned.contains(candidate.getId()) || consumed.contains(candidate.getId()))
+                    for (int dy = -1; dy <= 1; dy++)
                     {
-                        continue;
-                    }
+                        for (int dz = -1; dz <= 1; dz++)
+                        {
+                            List<EntityData> bucket = spatialIndex.get(centerCell.offset(dx, dy, dz));
+                            if (bucket == null) continue;
 
-                    double distance = distanceSq(candidate.getX(), candidate.getY(), candidate.getZ(),
-                            centerX, centerY, centerZ);
-                    if (distance <= nearestDistance)
-                    {
-                        nearestDistance = distance;
-                        nearest = candidate;
+                            for (EntityData candidate : bucket)
+                            {
+                                if (assigned.contains(candidate.getId())
+                                        || consumed.contains(candidate.getId()))
+                                {
+                                    continue;
+                                }
+
+                                double distance = distanceSq(candidate.getX(), candidate.getY(),
+                                        candidate.getZ(), centerX, centerY, centerZ);
+                                if (distance <= nearestDistance)
+                                {
+                                    nearestDistance = distance;
+                                    nearest = candidate;
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -227,6 +257,67 @@ public final class HerdManager
         for (AnimalHerd herd : herds.values())
         {
             updateCenter(herd, entities, worldTime);
+        }
+    }
+
+    private static final class SpatialCell
+    {
+        private final int dimension;
+        private final String entityType;
+        private final int x;
+        private final int y;
+        private final int z;
+
+        private SpatialCell(int dimension, String entityType, int x, int y, int z)
+        {
+            this.dimension = dimension;
+            this.entityType = entityType;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        private static SpatialCell from(EntityData data)
+        {
+            return from(data.getDimension(), data.getEntityType(),
+                    data.getX(), data.getY(), data.getZ());
+        }
+
+        private static SpatialCell from(int dimension, String entityType,
+                                        double x, double y, double z)
+        {
+            return new SpatialCell(dimension, entityType, cell(x), cell(y), cell(z));
+        }
+
+        private SpatialCell offset(int dx, int dy, int dz)
+        {
+            return new SpatialCell(dimension, entityType, x + dx, y + dy, z + dz);
+        }
+
+        private static int cell(double coordinate)
+        {
+            return (int) Math.floor(coordinate / 16.0D);
+        }
+
+        @Override
+        public boolean equals(Object object)
+        {
+            if (this == object) return true;
+            if (!(object instanceof SpatialCell)) return false;
+            SpatialCell other = (SpatialCell) object;
+            return dimension == other.dimension && x == other.x && y == other.y
+                    && z == other.z && entityType.equals(other.entityType);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = dimension;
+            result = 31 * result + entityType.hashCode();
+            result = 31 * result + x;
+            result = 31 * result + y;
+            result = 31 * result + z;
+            return result;
         }
     }
 
