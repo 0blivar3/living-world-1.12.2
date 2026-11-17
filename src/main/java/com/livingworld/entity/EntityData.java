@@ -98,7 +98,7 @@ public class EntityData
             {
                 long lastBreeding = entity.getEntityData().getLong("LivingWorldLastBreeding");
                 breedingCooldownUntil = Math.max(
-                        breedingCooldownUntil, lastBreeding + 6000L);
+                        breedingCooldownUntil, lastBreeding + 24000L);
             }
         }
 
