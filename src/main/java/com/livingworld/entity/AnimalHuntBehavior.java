@@ -19,7 +19,7 @@ import java.util.List;
  */
 public final class AnimalHuntBehavior
 {
-    private static final int SEARCH_RADIUS = 16;
+    private static final int SEARCH_RADIUS = 12;
     private static final int HUNGER_THRESHOLD = 65;
     private static final double ATTACK_DISTANCE_SQ = 2.25D;
     private static final double CHASE_SPEED = 1.15D;
@@ -27,6 +27,7 @@ public final class AnimalHuntBehavior
     private static final long ATTACK_COOLDOWN = 100L;
     private static final int FOOD_REWARD = 40;
     private static final String LAST_ATTACK_KEY = "LivingWorldLastHunt";
+    private static final String LAST_SEARCH_KEY = "LivingWorldLastHuntSearch";
 
     private AnimalHuntBehavior()
     {
@@ -47,6 +48,13 @@ public final class AnimalHuntBehavior
         {
             return;
         }
+
+        long lastSearch = predator.getEntityData().getLong(LAST_SEARCH_KEY);
+        if (worldTime - lastSearch < 200L)
+        {
+            return;
+        }
+        predator.getEntityData().setLong(LAST_SEARCH_KEY, worldTime);
 
         AxisAlignedBB searchBox = predator.getEntityBoundingBox().grow(SEARCH_RADIUS);
         List<EntityAnimal> nearby = world.getEntitiesWithinAABB(EntityAnimal.class, searchBox);
