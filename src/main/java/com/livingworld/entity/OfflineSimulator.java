@@ -120,9 +120,9 @@ public final class OfflineSimulator
             return false;
         }
 
-        // Match the loaded breeding system: every registered animal diet can
-        // reproduce, while unknown custom entity types remain unsupported.
-        return data.getDiet() != AnimalDiet.UNKNOWN;
+        // Most EntityAnimal subclasses can reproduce in vanilla. Mules are the
+        // notable sterile exception; custom registered animal types are allowed.
+        return !"minecraft:mule".equals(data.getEntityType());
     }
 
     private static double distanceSquared(EntityData first, EntityData second)
