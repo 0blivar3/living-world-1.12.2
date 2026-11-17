@@ -8,7 +8,10 @@ import net.minecraft.item.ItemSeeds;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 /**
  * Allows hungry chickens and pigs to search for suitable dropped food.
@@ -22,6 +25,8 @@ public final class AnimalForagingBehavior
     private static final double EAT_DISTANCE_SQ = 2.25D;
     private static final int HUNGER_THRESHOLD = 75;
     private static final int FOOD_VALUE = 30;
+    private static final Set<EntityAnimal> INSTALLED =
+            Collections.newSetFromMap(new WeakHashMap<EntityAnimal, Boolean>());
 
     private AnimalForagingBehavior()
     {
@@ -38,10 +43,10 @@ public final class AnimalForagingBehavior
         if (animal instanceof net.minecraft.entity.passive.EntityChicken
                 || animal instanceof net.minecraft.entity.passive.EntityPig)
         {
-            if (!animal.getEntityData().getBoolean("LivingWorldForagingTask"))
+            // AI tasks are runtime objects, so reinstall them after an entity reload.
+            if (INSTALLED.add(animal))
             {
                 animal.tasks.addTask(4, new ForageTask(animal, data));
-                animal.getEntityData().setBoolean("LivingWorldForagingTask", true);
             }
         }
     }
