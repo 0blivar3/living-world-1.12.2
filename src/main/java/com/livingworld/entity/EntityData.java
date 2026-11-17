@@ -136,7 +136,7 @@ public class EntityData
 
     /**
      * Advances the abstract state while the entity is not loaded.
-     * Animals consume one hunger point every 2,400 world ticks.
+     * Animal age advances continuously; hunger decreases once every 2,400 world ticks.
      * Villagers update their daily activity according to the world time.
      */
     public void simulateOffline(long worldTime)
