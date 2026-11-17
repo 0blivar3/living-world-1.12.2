@@ -26,6 +26,7 @@ public class EntityData
     private double y;
     private double z;
     private float health;
+    private float maxHealth;
     private boolean loaded;
     private boolean animal;
     private boolean villager;
@@ -67,6 +68,9 @@ public class EntityData
         this.health = entity instanceof EntityLivingBase
                 ? ((EntityLivingBase) entity).getHealth()
                 : 0.0F;
+        this.maxHealth = entity instanceof EntityLivingBase
+                ? ((EntityLivingBase) entity).getMaxHealth()
+                : this.health;
         this.animal = entity instanceof EntityAnimal;
         this.villager = entity instanceof EntityVillager;
         this.virtual = false;
@@ -318,6 +322,7 @@ public class EntityData
         tag.setDouble("Y", y);
         tag.setDouble("Z", z);
         tag.setFloat("Health", health);
+        tag.setFloat("MaxHealth", maxHealth);
         tag.setBoolean("Loaded", loaded);
         tag.setBoolean("Animal", animal);
         tag.setBoolean("Villager", villager);
@@ -355,6 +360,8 @@ public class EntityData
         data.y = tag.getDouble("Y");
         data.z = tag.getDouble("Z");
         data.health = tag.getFloat("Health");
+        data.maxHealth = tag.hasKey("MaxHealth")
+                ? tag.getFloat("MaxHealth") : data.health;
         data.loaded = false;
         data.animal = tag.getBoolean("Animal");
         data.villager = tag.getBoolean("Villager");
@@ -415,6 +422,7 @@ public class EntityData
     public double getY() { return y; }
     public double getZ() { return z; }
     public float getHealth() { return health; }
+    public float getMaxHealth() { return maxHealth; }
     public boolean isLoaded() { return loaded; }
     public void setLoaded(boolean loaded) { this.loaded = loaded; }
     public boolean isAnimal() { return animal; }
@@ -450,7 +458,8 @@ public class EntityData
         child.x = (first.x + second.x) * 0.5D;
         child.y = Math.max(first.y, second.y);
         child.z = (first.z + second.z) * 0.5D;
-        child.health = 10.0F;
+        child.maxHealth = first.maxHealth > 0.0F ? first.maxHealth : 10.0F;
+        child.health = child.maxHealth;
         child.loaded = false;
         child.animal = true;
         child.villager = false;
