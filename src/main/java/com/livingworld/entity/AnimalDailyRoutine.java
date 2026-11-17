@@ -46,7 +46,7 @@ public final class AnimalDailyRoutine
             return;
         }
 
-        animal.tasks.addTask(5, new NightRestTask(animal, data));
+        animal.tasks.addTask(4, new NightRestTask(animal, data));
     }
 
     /**
