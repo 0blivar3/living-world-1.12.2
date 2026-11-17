@@ -1,9 +1,7 @@
 package com.livingworld.entity;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityList;
 import net.minecraft.entity.passive.EntityAnimal;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 
 import java.util.Map;
