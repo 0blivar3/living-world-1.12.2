@@ -64,12 +64,12 @@ public final class VillagerBehavior
         }
 
         long worldTime = world.getTotalWorldTime();
-        long lastThreatScan = villager.getEntityData().getLong("LivingWorldLastThreatScan");
-        if (worldTime - lastThreatScan < 200L)
+        int scanPhase = Math.floorMod(
+                (int) (worldTime / 100L) + villager.getUniqueID().hashCode(), 2);
+        if (scanPhase != 0)
         {
             return;
         }
-        villager.getEntityData().setLong("LivingWorldLastThreatScan", worldTime);
 
         EntityMob threat = findNearestThreat(villager, world);
         if (threat != null)
