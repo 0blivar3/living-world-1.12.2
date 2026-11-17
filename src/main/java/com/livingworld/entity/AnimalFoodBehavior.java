@@ -144,6 +144,7 @@ public final class AnimalFoodBehavior
         private BlockPos findGrass()
         {
             BlockPos origin = animal.getPosition();
+            BlockPos.MutableBlockPos candidate = new BlockPos.MutableBlockPos();
             BlockPos nearest = null;
             double nearestDistance = SEARCH_RADIUS * SEARCH_RADIUS;
 
@@ -160,7 +161,7 @@ public final class AnimalFoodBehavior
                             continue;
                         }
 
-                        BlockPos candidate = origin.add(x, y, z);
+                        candidate.setPos(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
                         if (!animal.world.isBlockLoaded(candidate)
                                 || animal.world.getBlockState(candidate).getBlock() != Blocks.GRASS)
                         {
@@ -174,7 +175,7 @@ public final class AnimalFoodBehavior
                         if (distance < nearestDistance)
                         {
                             nearestDistance = distance;
-                            nearest = candidate;
+                            nearest = new BlockPos(candidate);
                         }
                     }
                 }
