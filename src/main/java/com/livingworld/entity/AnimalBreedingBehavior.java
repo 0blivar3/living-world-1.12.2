@@ -2,6 +2,7 @@ package com.livingworld.entity;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.EntityAnimal;
+import net.minecraft.entity.passive.EntityMule;
 import net.minecraft.world.World;
 
 import java.util.Map;
@@ -29,6 +30,7 @@ public final class AnimalBreedingBehavior
     {
         if (animal == null || data == null || trackedEntities == null
                 || world == null || world.isRemote || !animal.isEntityAlive()
+                || animal instanceof EntityMule
                 || animal.getGrowingAge() != 0 || animal.isInLove()
                 || data.getHunger() < MIN_HUNGER)
         {
@@ -67,8 +69,9 @@ public final class AnimalBreedingBehavior
                 continue;
             }
             EntityData candidateData = trackedEntities.get(candidate.getUniqueID());
-            if (!candidate.isEntityAlive() || candidate.getGrowingAge() != 0
-                    || candidate.isInLove() || candidate.getClass() != animal.getClass()
+            if (!candidate.isEntityAlive() || candidate instanceof EntityMule
+                    || candidate.getGrowingAge() != 0 || candidate.isInLove()
+                    || candidate.getClass() != animal.getClass()
                     || candidateData == null || candidateData.getHunger() < MIN_HUNGER
                     || !isCooldownComplete(candidate, candidateData, worldTime))
             {
