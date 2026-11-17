@@ -1,13 +1,12 @@
 package com.livingworld.entity;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.entity.passive.EntityAnimal;
+import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -25,7 +24,7 @@ public final class AnimalHerdBehavior
 
     private AnimalHerdBehavior() { }
 
-    public static void update(EntityAnimal animal, EntityData data, AnimalHerd herd, World world, long worldTime)
+    public static void update(EntityAnimal animal, EntityData data, AnimalHerd herd, World world, long worldTime, ThreatIndex threats)
     {
         if (animal == null || data == null || herd == null || world == null || world.isRemote
                 || animal.isDead || herd.getMembers().size() < 2) return;
@@ -36,21 +35,8 @@ public final class AnimalHerdBehavior
                 (int) (worldTime / 100L) + animal.getUniqueID().hashCode(), 2);
         if (scanPhase == 0)
         {
-            List<EntityMob> threats = world.getEntitiesWithinAABB(
-                    EntityMob.class, animal.getEntityBoundingBox().grow(DANGER_RADIUS));
-            EntityMob nearestThreat = null;
-            double nearestDistance = DANGER_RADIUS * DANGER_RADIUS;
-            for (EntityMob threat : threats)
-            {
-                if (threat.isDead) continue;
-                double distance = animal.getDistanceSq(threat);
-                if (distance < nearestDistance)
-                {
-                    nearestDistance = distance;
-                    nearestThreat = threat;
-                }
-            }
-
+            EntityMob nearestThreat = threats == null ? null
+                    : threats.findNearest(animal, DANGER_RADIUS);
             if (nearestThreat != null)
             {
                 herd.raiseAlarm(nearestThreat.posX, nearestThreat.posY, nearestThreat.posZ,
