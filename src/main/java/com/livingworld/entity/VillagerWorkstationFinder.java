@@ -29,7 +29,10 @@ public final class VillagerWorkstationFinder
         }
 
         int profession = villager.getProfession();
-        BlockPos origin = new BlockPos(villager);
+        int originX = villager.getPosition().getX();
+        int originY = villager.getPosition().getY();
+        int originZ = villager.getPosition().getZ();
+        BlockPos.MutableBlockPos candidate = new BlockPos.MutableBlockPos();
         BlockPos best = null;
         double bestDistance = Double.MAX_VALUE;
 
@@ -39,7 +42,7 @@ public final class VillagerWorkstationFinder
             {
                 for (int z = -HORIZONTAL_RADIUS; z <= HORIZONTAL_RADIUS; z++)
                 {
-                    BlockPos candidate = origin.add(x, y, z);
+                    candidate.setPos(originX + x, originY + y, originZ + z);
 
                     // Never force-load chunks just to search for a work block.
                     if (!world.isBlockLoaded(candidate))
@@ -57,7 +60,7 @@ public final class VillagerWorkstationFinder
                     if (distance < bestDistance)
                     {
                         bestDistance = distance;
-                        best = candidate.toImmutable();
+                        best = new BlockPos(candidate);
                     }
                 }
             }
