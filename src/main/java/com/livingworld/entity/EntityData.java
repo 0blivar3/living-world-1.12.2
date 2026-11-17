@@ -436,19 +436,20 @@ public class EntityData
     public boolean isVirtual() { return virtual; }
     public void setVirtual(boolean virtual) { this.virtual = virtual; }
 
-    public static EntityData createVirtualOffspring(EntityData parent, long worldTime)
+    public static EntityData createVirtualOffspring(EntityData first, EntityData second,
+                                                       long worldTime)
     {
-        EntityData child = new EntityData(UUID.randomUUID(), parent.entityType);
-        child.dimension = parent.dimension;
-        child.x = parent.x;
-        child.y = parent.y;
-        child.z = parent.z;
+        EntityData child = new EntityData(UUID.randomUUID(), first.entityType);
+        child.dimension = first.dimension;
+        child.x = (first.x + second.x) * 0.5D;
+        child.y = Math.max(first.y, second.y);
+        child.z = (first.z + second.z) * 0.5D;
         child.health = 10.0F;
         child.loaded = false;
         child.animal = true;
         child.villager = false;
         child.hunger = 75;
-        child.diet = parent.diet;
+        child.diet = first.diet;
         child.growingAge = -24000;
         child.breedingCooldownUntil = 0L;
         child.virtual = true;
