@@ -36,7 +36,7 @@ public final class AnimalBreedingBehavior
             return;
         }
 
-        if (!isCooldownComplete(animal, worldTime))
+        if (!isCooldownComplete(animal, data, worldTime))
         {
             return;
         }
@@ -56,7 +56,7 @@ public final class AnimalBreedingBehavior
             EntityAnimal candidate = (EntityAnimal) entity;
             if (!candidate.isEntityAlive() || candidate.getGrowingAge() != 0
                     || candidate.isInLove() || candidate.getClass() != animal.getClass()
-                    || !isCooldownComplete(candidate, worldTime))
+                    || !isCooldownComplete(candidate, candidateData, worldTime))
             {
                 continue;
             }
@@ -87,18 +87,22 @@ public final class AnimalBreedingBehavior
 
         data.consumeHunger(HUNGER_COST);
         partnerData.consumeHunger(HUNGER_COST);
+        data.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
+        partnerData.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
         animal.getEntityData().setLong(LAST_BREEDING_KEY, worldTime);
         partner.getEntityData().setLong(LAST_BREEDING_KEY, worldTime);
     }
 
-    private static boolean isCooldownComplete(EntityAnimal animal, long worldTime)
+    private static boolean isCooldownComplete(EntityAnimal animal, EntityData data,
+                                              long worldTime)
     {
-        if (!animal.getEntityData().hasKey(LAST_BREEDING_KEY))
+        long cooldownUntil = data.getBreedingCooldownUntil();
+        if (animal.getEntityData().hasKey(LAST_BREEDING_KEY))
         {
-            return true;
+            long lastBreeding = animal.getEntityData().getLong(LAST_BREEDING_KEY);
+            cooldownUntil = Math.max(cooldownUntil, lastBreeding + BREEDING_COOLDOWN);
         }
 
-        long lastBreeding = animal.getEntityData().getLong(LAST_BREEDING_KEY);
-        return worldTime - lastBreeding >= BREEDING_COOLDOWN;
+        return worldTime >= cooldownUntil;
     }
 }
