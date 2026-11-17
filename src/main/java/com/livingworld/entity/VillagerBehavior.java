@@ -63,10 +63,23 @@ public final class VillagerBehavior
             return;
         }
 
+        long worldTime = world.getTotalWorldTime();
+        long lastThreatScan = villager.getEntityData().getLong("LivingWorldLastThreatScan");
+        if (worldTime - lastThreatScan < 200L)
+        {
+            return;
+        }
+        villager.getEntityData().setLong("LivingWorldLastThreatScan", worldTime);
+
         EntityMob threat = findNearestThreat(villager, world);
         if (threat != null)
         {
             fleeFrom(villager, threat);
+            return;
+        }
+
+        if (!villager.getNavigator().noPath())
+        {
             return;
         }
 
