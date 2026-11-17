@@ -74,6 +74,7 @@ public final class AnimalNaturalForagingBehavior
         private final EntityAnimal animal;
         private final EntityData data;
         private BlockPos target;
+        private int searchCooldown;
 
         private GroundForageTask(EntityAnimal animal, EntityData data)
         {
@@ -87,9 +88,18 @@ public final class AnimalNaturalForagingBehavior
         {
             if (!canForage())
             {
+                searchCooldown = 0;
                 return false;
             }
 
+            if (searchCooldown > 0)
+            {
+                searchCooldown--;
+                return false;
+            }
+
+            // Avoid scanning the surrounding blocks every single AI tick.
+            searchCooldown = 20;
             target = findFood();
             return target != null;
         }
