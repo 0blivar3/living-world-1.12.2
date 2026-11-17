@@ -3,20 +3,27 @@ package com.livingworld.entity;
 import com.livingworld.world.ALifeWorldData;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
+import net.minecraft.entity.passive.EntityAnimal;
+import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.storage.MapStorage;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * Tracks entities separately for each dimension and persists their snapshots.
+ * Tracks only entities that participate in the current A-Life simulation.
+ * Unloaded entities remain in saved data; records are removed only after their
+ * last known chunk is loaded and the entity is confirmed absent.
  */
 public class EntityTracker
 {
@@ -30,7 +37,6 @@ public class EntityTracker
         private ALifeWorldData savedData;
         private long ticksUntilUpdate;
         private long lastHerdUpdateWorldTime = Long.MIN_VALUE;
-        private long lastOfflineBreedingWorldTime = Long.MIN_VALUE;
     }
 
     private final Map<Integer, DimensionState> dimensions = new HashMap<Integer, DimensionState>();
@@ -55,8 +61,13 @@ public class EntityTracker
         long worldTime = world.getTotalWorldTime();
         Set<UUID> loadedNow = new HashSet<UUID>();
 
-        for (Entity entity : world.loadedEntityList)
+        for (Entity entity : new ArrayList<Entity>(world.loadedEntityList))
         {
+            if (!isTrackedEntity(entity) || entity.isDead)
+            {
+                continue;
+            }
+
             UUID id = entity.getUniqueID();
             ResourceLocation registryName = EntityList.getKey(entity);
             String type = registryName == null
@@ -69,97 +80,111 @@ public class EntityTracker
                 data = new EntityData(id, type);
                 state.entities.put(id, data);
                 data.update(entity, worldTime, dimension, world);
-                if (entity instanceof net.minecraft.entity.passive.EntityVillager)
-                {
-                    VillagerBehavior.updateLoadedVillager(
-                            (net.minecraft.entity.passive.EntityVillager) entity, data, world);
-                }
-                loadedNow.add(id);
-                continue;
             }
-
-            // Advance hunger for continuously loaded animals as well as offline entities.
-            if (data.isLoaded())
+            else
             {
+                boolean wasOffline = !data.isLoaded();
+
+                // Catch up offline hunger/age before marking the entity loaded.
                 data.simulateOffline(worldTime);
+                if (!data.applyOfflineState(entity, wasOffline))
+                {
+                    continue;
+                }
+
+                data.update(entity, worldTime, dimension, world);
             }
 
-            // Apply any simulated starvation damage before refreshing the snapshot.
-            if (!data.applyOfflineState(entity))
-            {
-                continue;
-            }
-
-            data.update(entity, worldTime, dimension, world);
-            if (entity instanceof net.minecraft.entity.passive.EntityAnimal)
-            {
-                AnimalFoodBehavior.update(
-                        (net.minecraft.entity.passive.EntityAnimal) entity, data, world);
-            }
-            if (entity instanceof net.minecraft.entity.passive.EntityVillager)
-            {
-                VillagerBehavior.updateLoadedVillager(
-                        (net.minecraft.entity.passive.EntityVillager) entity, data, world);
-            }
             loadedNow.add(id);
         }
 
-        // Only entities absent from the current loaded-entity list are offline.
-        for (EntityData data : state.entities.values())
+        Iterator<Map.Entry<UUID, EntityData>> iterator = state.entities.entrySet().iterator();
+        while (iterator.hasNext())
         {
-            if (!loadedNow.contains(data.getId()))
+            EntityData data = iterator.next().getValue();
+            if (loadedNow.contains(data.getId()))
             {
-                data.setLoaded(false);
+                continue;
+            }
+
+            data.setLoaded(false);
+
+            // Virtual offspring from older saves have no real entity to load.
+            // Discard those unsupported records rather than retaining phantom life.
+            if (data.isVirtual())
+            {
+                iterator.remove();
+                continue;
+            }
+
+            // Absence from loadedEntityList alone means only "unloaded". If the
+            // last known position is in a loaded chunk, absence confirms removal/death.
+            BlockPos lastPosition = new BlockPos(data.getX(), data.getY(), data.getZ());
+            if (world.isBlockLoaded(lastPosition))
+            {
+                iterator.remove();
             }
         }
 
         OfflineSimulator.simulate(state.entities.values(), worldTime);
-
-        if (state.lastOfflineBreedingWorldTime == Long.MIN_VALUE
-                || worldTime - state.lastOfflineBreedingWorldTime >= 1200L)
-        {
-            OfflineSimulator.simulateBreeding(state.entities, worldTime);
-            state.lastOfflineBreedingWorldTime = worldTime;
-        }
 
         if (state.lastHerdUpdateWorldTime == Long.MIN_VALUE
                 || worldTime - state.lastHerdUpdateWorldTime >= HERD_UPDATE_INTERVAL)
         {
             HerdManager.update(state.entities, state.herds, dimension, worldTime);
             state.lastHerdUpdateWorldTime = worldTime;
-            state.savedData.setHerds(state.herds.values());
         }
 
-        // Keep the center current so followers can react to the group's movement.
         HerdManager.refreshCenters(state.entities, state.herds, worldTime);
 
         for (Entity entity : world.loadedEntityList)
         {
-            if (entity instanceof net.minecraft.entity.passive.EntityAnimal)
+            if (!(entity instanceof EntityAnimal) || entity.isDead)
             {
-                net.minecraft.entity.passive.EntityAnimal animal =
-                        (net.minecraft.entity.passive.EntityAnimal) entity;
-                EntityData animalData = state.entities.get(entity.getUniqueID());
-                if (animalData != null)
-                {
-                    AnimalDailyRoutine.update(animal, animalData);
-                    AnimalForagingBehavior.update(animal, animalData);
-                    AnimalNaturalForagingBehavior.update(animal, animalData);
-                    AnimalHuntBehavior.update(animal, animalData, world, worldTime);
-                    AnimalBreedingBehavior.update(
-                            animal, animalData, state.entities, world, worldTime);
-                }
+                continue;
+            }
 
-                AnimalHerd herd = findHerd(state.herds.values(), entity.getUniqueID());
-                if (herd != null)
+            EntityAnimal animal = (EntityAnimal) entity;
+            EntityData animalData = state.entities.get(entity.getUniqueID());
+            if (animalData == null)
+            {
+                continue;
+            }
+
+            AnimalDailyRoutine.update(animal, animalData);
+            AnimalFoodBehavior.update(animal, animalData, world);
+            AnimalForagingBehavior.update(animal, animalData);
+            AnimalNaturalForagingBehavior.update(animal, animalData);
+            AnimalHuntBehavior.update(animal, animalData, world, worldTime);
+            AnimalBreedingBehavior.update(animal, animalData, state.entities, world, worldTime);
+
+            AnimalHerd herd = findHerd(state.herds.values(), entity.getUniqueID());
+            if (herd != null)
+            {
+                AnimalHerdBehavior.update(animal, herd, world, worldTime);
+            }
+        }
+
+        for (Entity entity : world.loadedEntityList)
+        {
+            if (entity instanceof EntityVillager && !entity.isDead)
+            {
+                EntityData villagerData = state.entities.get(entity.getUniqueID());
+                if (villagerData != null)
                 {
-                    AnimalHerdBehavior.update(animal, herd, world, worldTime);
+                    VillagerBehavior.updateLoadedVillager(
+                            (EntityVillager) entity, villagerData, world);
                 }
             }
         }
 
         state.savedData.setHerds(state.herds.values());
         state.savedData.setEntities(state.entities.values());
+    }
+
+    private boolean isTrackedEntity(Entity entity)
+    {
+        return entity instanceof EntityAnimal || entity instanceof EntityVillager;
     }
 
     private DimensionState getOrCreateState(World world, int dimension)
@@ -172,7 +197,8 @@ public class EntityTracker
 
         state = new DimensionState();
         MapStorage storage = world.getPerWorldStorage();
-        state.savedData = (ALifeWorldData) storage.getOrLoadData(ALifeWorldData.class, ALifeWorldData.DATA_NAME);
+        state.savedData = (ALifeWorldData) storage.getOrLoadData(
+                ALifeWorldData.class, ALifeWorldData.DATA_NAME);
 
         if (state.savedData == null)
         {
