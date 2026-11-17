@@ -114,8 +114,16 @@ public class EntityTracker
 
             data.setLoaded(false);
 
-            // A virtual offspring remains in saved data until its chunk is
-            // naturally loaded and materialization succeeds.
+            // Offline starvation can kill both ordinary animals and virtual
+            // offspring. Remove dead records before they can be materialized.
+            if (data.isAnimal() && data.getHealth() <= 0.0F)
+            {
+                iterator.remove();
+                continue;
+            }
+
+            // A living virtual offspring remains in saved data until its chunk
+            // is naturally loaded and materialization succeeds.
             if (data.isVirtual())
             {
                 continue;
