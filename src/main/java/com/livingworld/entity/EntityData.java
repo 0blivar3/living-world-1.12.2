@@ -17,6 +17,7 @@ import java.util.UUID;
 public class EntityData
 {
     private static final long HUNGER_INTERVAL = 2400L;
+    private static final long MATURE_BREEDING_DELAY = 24000L;
 
     private final UUID id;
     private final String entityType;
@@ -76,7 +77,18 @@ public class EntityData
         this.virtual = false;
         if (entity instanceof EntityAgeable)
         {
-            growingAge = ((EntityAgeable) entity).getGrowingAge();
+            int previousAge = growingAge;
+            int currentAge = ((EntityAgeable) entity).getGrowingAge();
+
+            // New offspring must spend additional time as adults before
+            // entering the breeding population. This slows generation chains.
+            if (previousAge < 0 && currentAge == 0)
+            {
+                breedingCooldownUntil = Math.max(
+                        breedingCooldownUntil, worldTime + MATURE_BREEDING_DELAY);
+            }
+
+            growingAge = currentAge;
         }
 
         if (animal)
@@ -173,6 +185,7 @@ public class EntityData
         long ageElapsed = Math.max(0L, worldTime - lastAgeSimulationWorldTime);
         if (!loaded && ageElapsed > 0L)
         {
+            int previousAge = growingAge;
             if (growingAge < 0)
             {
                 growingAge = (int) Math.min(0L, (long) growingAge + ageElapsed);
@@ -180,6 +193,12 @@ public class EntityData
             else if (growingAge > 0)
             {
                 growingAge = (int) Math.max(0L, (long) growingAge - ageElapsed);
+            }
+
+            if (previousAge < 0 && growingAge == 0)
+            {
+                breedingCooldownUntil = Math.max(
+                        breedingCooldownUntil, worldTime + MATURE_BREEDING_DELAY);
             }
         }
         lastAgeSimulationWorldTime = worldTime;
