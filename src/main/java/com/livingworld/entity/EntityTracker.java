@@ -3,6 +3,7 @@ package com.livingworld.entity;
 import com.livingworld.world.ALifeWorldData;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
+import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityVillager;
 import net.minecraft.util.ResourceLocation;
@@ -46,6 +47,7 @@ public class EntityTracker
         private final List<Entity> loadedEntitySnapshot = new ArrayList<Entity>();
         private final Set<UUID> loadedNow = new HashSet<UUID>();
         private final Map<UUID, AnimalHerd> herdByMember = new HashMap<UUID, AnimalHerd>();
+        private final ThreatIndex threatIndex = new ThreatIndex();
     }
 
     private final Map<Integer, DimensionState> dimensions = new HashMap<Integer, DimensionState>();
@@ -77,6 +79,14 @@ public class EntityTracker
         state.loadedEntitySnapshot.clear();
         state.loadedEntitySnapshot.addAll(world.loadedEntityList);
         state.loadedNow.clear();
+        state.threatIndex.clear();
+        for (Entity loaded : state.loadedEntitySnapshot)
+        {
+            if (loaded instanceof EntityMob && !loaded.isDead)
+            {
+                state.threatIndex.add((EntityMob) loaded);
+            }
+        }
 
         for (Entity entity : state.loadedEntitySnapshot)
         {
@@ -208,13 +218,13 @@ public class EntityTracker
                 AnimalHerd herd = state.herdByMember.get(entity.getUniqueID());
                 if (herd != null)
                 {
-                    AnimalHerdBehavior.update(animal, entityData, herd, world, worldTime);
+                    AnimalHerdBehavior.update(animal, entityData, herd, world, worldTime, state.threatIndex);
                 }
             }
             else if (entity instanceof EntityVillager)
             {
                 VillagerBehavior.updateLoadedVillager(
-                        (EntityVillager) entity, entityData, world);
+                        (EntityVillager) entity, entityData, world, state.threatIndex);
             }
         }
 
