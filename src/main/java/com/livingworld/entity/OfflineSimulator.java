@@ -26,7 +26,7 @@ public final class OfflineSimulator
     private static final double BREEDING_RADIUS_SQ = 8.0D * 8.0D;
     private static final int MIN_BREEDING_HUNGER = 75;
     private static final int BREEDING_HUNGER_COST = 25;
-    private static final long BREEDING_COOLDOWN = 6000L;
+    private static final long BREEDING_COOLDOWN = 24000L;
     private static final int MAX_VIRTUAL_OFFSPRING = 64;
     private static final int MAX_BIRTHS_PER_UPDATE = 4;
 
