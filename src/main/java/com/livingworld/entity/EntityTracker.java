@@ -234,7 +234,6 @@ public class EntityTracker
             state.savedData = new ALifeWorldData();
             storage.setData(ALifeWorldData.DATA_NAME, state.savedData);
         }
-        }
 
         // Keep one authoritative copy of each map. EntityData and AnimalHerd
         // instances are mutable, so the tracker and WorldSavedData can share them.
