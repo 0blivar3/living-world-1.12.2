@@ -49,6 +49,7 @@ public class EntityData
     private long lastUpdateWorldTime;
     private long lastSimulationWorldTime;
     private long lastWorkstationSearchWorldTime = Long.MIN_VALUE;
+    private int pendingStarvationDamage;
 
     public EntityData(UUID id, String entityType)
     {
@@ -177,9 +178,17 @@ public class EntityData
         // Loaded animals retain vanilla age and health handling. Offline health
         // loss is applied only when the entity is materialized again.
         long starvingIntervals = intervals - hungerToConsume;
-        if (!loaded && starvingIntervals > 0)
+        if (starvingIntervals > 0)
         {
-            health = Math.max(0.0F, health - (float) starvingIntervals);
+            if (loaded)
+            {
+                pendingStarvationDamage += (int) Math.min(
+                        Integer.MAX_VALUE - pendingStarvationDamage, starvingIntervals);
+            }
+            else
+            {
+                health = Math.max(0.0F, health - (float) starvingIntervals);
+            }
         }
 
         lastSimulationWorldTime += intervals * HUNGER_INTERVAL;
@@ -201,21 +210,37 @@ public class EntityData
             ((EntityAgeable) entity).setGrowingAge(growingAge);
         }
 
-        if (!wasOffline || !(entity instanceof EntityLivingBase))
+        if (!(entity instanceof EntityLivingBase))
         {
             return true;
         }
 
         EntityLivingBase living = (EntityLivingBase) entity;
-        if (health <= 0.0F)
+        if (wasOffline)
         {
-            living.setHealth(0.0F);
-            living.setDead();
-            loaded = false;
-            return false;
+            if (health <= 0.0F)
+            {
+                living.setHealth(0.0F);
+                living.setDead();
+                loaded = false;
+                return false;
+            }
+
+            living.setHealth(Math.min(health, living.getMaxHealth()));
+        }
+        else if (pendingStarvationDamage > 0)
+        {
+            living.setHealth(Math.max(0.0F,
+                    living.getHealth() - pendingStarvationDamage));
+            pendingStarvationDamage = 0;
+            if (living.getHealth() <= 0.0F)
+            {
+                living.setDead();
+                loaded = false;
+                return false;
+            }
         }
 
-        living.setHealth(Math.min(health, living.getMaxHealth()));
         return true;
     }
 
@@ -301,6 +326,7 @@ public class EntityData
         tag.setLong("LastUpdate", lastUpdateWorldTime);
         tag.setLong("LastSimulation", lastSimulationWorldTime);
         tag.setLong("LastWorkstationSearch", lastWorkstationSearchWorldTime);
+        tag.setInteger("PendingStarvationDamage", pendingStarvationDamage);
         return tag;
     }
 
@@ -358,6 +384,7 @@ public class EntityData
                 : data.lastUpdateWorldTime;
         data.lastWorkstationSearchWorldTime = tag.hasKey("LastWorkstationSearch")
                 ? tag.getLong("LastWorkstationSearch") : Long.MIN_VALUE;
+        data.pendingStarvationDamage = tag.getInteger("PendingStarvationDamage");
         return data;
     }
 
