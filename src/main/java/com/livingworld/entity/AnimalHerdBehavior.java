@@ -32,11 +32,10 @@ public final class AnimalHerdBehavior
 
         // Threat scans are staggered per animal and run at most once every
         // 200 ticks, rather than querying nearby mobs on every tracker update.
-        long lastThreatScan = animal.getEntityData().getLong("LivingWorldLastHerdThreatScan");
-        int scanOffset = Math.floorMod(animal.getUniqueID().hashCode(), 200);
-        if (worldTime - lastThreatScan >= 200L + scanOffset)
+        int scanPhase = Math.floorMod(
+                (int) (worldTime / 100L) + animal.getUniqueID().hashCode(), 2);
+        if (scanPhase == 0)
         {
-            animal.getEntityData().setLong("LivingWorldLastHerdThreatScan", worldTime);
             List<EntityMob> threats = world.getEntitiesWithinAABB(
                     EntityMob.class, animal.getEntityBoundingBox().grow(DANGER_RADIUS));
             EntityMob nearestThreat = null;
