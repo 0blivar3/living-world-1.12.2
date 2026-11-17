@@ -1,9 +1,7 @@
 package com.livingworld.entity;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityAgeable;
 import net.minecraft.entity.EntityList;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
@@ -200,16 +198,8 @@ public final class OfflineSimulator
             offspring.setUniqueId(data.getId());
             offspring.setPosition(data.getX(), data.getY(), data.getZ());
 
-            if (offspring instanceof EntityAgeable)
-            {
-                ((EntityAgeable) offspring).setGrowingAge(data.getGrowingAge());
-            }
-
-            if (offspring instanceof EntityLivingBase)
-            {
-                EntityLivingBase living = (EntityLivingBase) offspring;
-                living.setHealth(Math.min(data.getHealth(), living.getMaxHealth()));
-            }
+            offspring.setGrowingAge(data.getGrowingAge());
+            offspring.setHealth(Math.min(data.getHealth(), offspring.getMaxHealth()));
 
             // spawnEntity returns false if Forge rejects the spawn. In that case
             // keep the virtual record and retry on a later tracker update.
