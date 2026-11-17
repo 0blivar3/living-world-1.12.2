@@ -11,10 +11,8 @@ import net.minecraft.world.World;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -120,8 +118,9 @@ public final class OfflineSimulator
             return false;
         }
 
-        return data.getDiet() == AnimalDiet.HERBIVORE
-                || data.getDiet() == AnimalDiet.OMNIVORE;
+        // Match the loaded breeding system: every registered animal diet can
+        // reproduce, while unknown custom entity types remain unsupported.
+        return data.getDiet() != AnimalDiet.UNKNOWN;
     }
 
     private static double distanceSquared(EntityData first, EntityData second)
