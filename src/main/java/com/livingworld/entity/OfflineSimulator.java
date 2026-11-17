@@ -101,7 +101,7 @@ public final class OfflineSimulator
                 first.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
                 second.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
 
-                EntityData offspring = EntityData.createVirtualOffspring(first, worldTime);
+                EntityData offspring = EntityData.createVirtualOffspring(first, second, worldTime);
                 entities.put(offspring.getId(), offspring);
                 virtualCount++;
                 births++;
