@@ -2,10 +2,10 @@
 {
   "modid": "livingworld",
   "name": "Living World",
-  "description": "A living world simulation and A-Life framework for Minecraft 1.12.2.",
+  "description": "An A-Life simulation mod featuring autonomous animal behavior, herds, hunting, breeding, villager routines, and offline world simulation.",
   "version": "${version}",
   "mcversion": "${mcversion}",
-  "url": "",
+  "url": "https://github.com/0blivar3/living-world-1.12.2",
   "updateUrl": "",
   "authorList": ["0blivar3"],
   "credits": "",
