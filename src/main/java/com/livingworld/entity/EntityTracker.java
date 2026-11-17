@@ -156,44 +156,51 @@ public class EntityTracker
 
         HerdManager.refreshCenters(state.entities, state.herds, worldTime);
 
-        for (Entity entity : world.loadedEntityList)
+        // Build a direct membership index once instead of scanning every herd
+        // for every loaded animal (which becomes expensive in populated worlds).
+        Map<UUID, AnimalHerd> herdByMember = new HashMap<UUID, AnimalHerd>();
+        for (AnimalHerd herd : state.herds.values())
         {
-            if (!(entity instanceof EntityAnimal) || entity.isDead)
+            for (UUID memberId : herd.getMembers())
             {
-                continue;
-            }
-
-            EntityAnimal animal = (EntityAnimal) entity;
-            EntityData animalData = state.entities.get(entity.getUniqueID());
-            if (animalData == null)
-            {
-                continue;
-            }
-
-            AnimalDailyRoutine.update(animal, animalData);
-            AnimalFoodBehavior.update(animal, animalData, world);
-            AnimalForagingBehavior.update(animal, animalData);
-            AnimalNaturalForagingBehavior.update(animal, animalData);
-            AnimalHuntBehavior.update(animal, animalData, world, worldTime);
-            AnimalBreedingBehavior.update(animal, animalData, state.entities, world, worldTime);
-
-            AnimalHerd herd = findHerd(state.herds.values(), entity.getUniqueID());
-            if (herd != null)
-            {
-                AnimalHerdBehavior.update(animal, animalData, herd, world, worldTime);
+                herdByMember.put(memberId, herd);
             }
         }
 
+        // One pass over loaded entities handles both animals and villagers.
         for (Entity entity : world.loadedEntityList)
         {
-            if (entity instanceof EntityVillager && !entity.isDead)
+            if (entity.isDead)
             {
-                EntityData villagerData = state.entities.get(entity.getUniqueID());
-                if (villagerData != null)
+                continue;
+            }
+
+            EntityData entityData = state.entities.get(entity.getUniqueID());
+            if (entityData == null)
+            {
+                continue;
+            }
+
+            if (entity instanceof EntityAnimal)
+            {
+                EntityAnimal animal = (EntityAnimal) entity;
+                AnimalDailyRoutine.update(animal, entityData);
+                AnimalFoodBehavior.update(animal, entityData, world);
+                AnimalForagingBehavior.update(animal, entityData);
+                AnimalNaturalForagingBehavior.update(animal, entityData);
+                AnimalHuntBehavior.update(animal, entityData, world, worldTime);
+                AnimalBreedingBehavior.update(animal, entityData, state.entities, world, worldTime);
+
+                AnimalHerd herd = herdByMember.get(entity.getUniqueID());
+                if (herd != null)
                 {
-                    VillagerBehavior.updateLoadedVillager(
-                            (EntityVillager) entity, villagerData, world);
+                    AnimalHerdBehavior.update(animal, entityData, herd, world, worldTime);
                 }
+            }
+            else if (entity instanceof EntityVillager)
+            {
+                VillagerBehavior.updateLoadedVillager(
+                        (EntityVillager) entity, entityData, world);
             }
         }
 
@@ -232,18 +239,6 @@ public class EntityTracker
 
         dimensions.put(dimension, state);
         return state;
-    }
-
-    private AnimalHerd findHerd(Collection<AnimalHerd> herds, UUID memberId)
-    {
-        for (AnimalHerd herd : herds)
-        {
-            if (herd.getMembers().contains(memberId))
-            {
-                return herd;
-            }
-        }
-        return null;
     }
 
     public EntityData getEntity(int dimension, UUID id)
