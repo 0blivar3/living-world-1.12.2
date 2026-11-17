@@ -57,18 +57,36 @@ public final class OfflineSimulator
             return;
         }
 
-        List<EntityData> animals = new ArrayList<EntityData>(entities.values());
+        List<EntityData> eligibleAnimals = new ArrayList<EntityData>();
+        Map<BreedingCell, List<EntityData>> cells =
+                new java.util.HashMap<BreedingCell, List<EntityData>>();
         int virtualCount = 0;
-        for (EntityData data : animals)
+
+        for (EntityData data : entities.values())
         {
             if (data.isVirtual())
             {
                 virtualCount++;
             }
+
+            if (!canBreed(data, worldTime))
+            {
+                continue;
+            }
+
+            eligibleAnimals.add(data);
+            BreedingCell cell = BreedingCell.from(data);
+            List<EntityData> bucket = cells.get(cell);
+            if (bucket == null)
+            {
+                bucket = new ArrayList<EntityData>();
+                cells.put(cell, bucket);
+            }
+            bucket.add(data);
         }
 
         int births = 0;
-        for (int i = 0; i < animals.size(); i++)
+        for (EntityData first : eligibleAnimals)
         {
             if (births >= MAX_BIRTHS_PER_UPDATE
                     || virtualCount >= MAX_VIRTUAL_OFFSPRING)
@@ -76,39 +94,127 @@ public final class OfflineSimulator
                 break;
             }
 
-            EntityData first = animals.get(i);
-            if (!canBreed(first, worldTime))
-            {
-                continue;
-            }
+            BreedingCell origin = BreedingCell.from(first);
+            boolean paired = false;
 
-            for (int j = i + 1; j < animals.size(); j++)
+            // Only inspect the current cell and its 26 neighbors. Since each
+            // cell is eight blocks wide, every possible partner within the
+            // breeding radius must be in one of these buckets.
+            for (int dx = -1; dx <= 1 && !paired; dx++)
             {
-                EntityData second = animals.get(j);
-                if (!canBreed(second, worldTime)
-                        || first.getDimension() != second.getDimension()
-                        || !first.getEntityType().equals(second.getEntityType())
-                        || first.getDiet() != second.getDiet()
-                        || distanceSquared(first, second) > BREEDING_RADIUS_SQ)
+                for (int dy = -1; dy <= 1 && !paired; dy++)
                 {
-                    continue;
+                    for (int dz = -1; dz <= 1 && !paired; dz++)
+                    {
+                        List<EntityData> candidates = cells.get(
+                                origin.offset(dx, dy, dz));
+                        if (candidates == null)
+                        {
+                            continue;
+                        }
+
+                        for (EntityData second : candidates)
+                        {
+                            // UUID ordering makes each pair considered once.
+                            if (first.getId().compareTo(second.getId()) >= 0
+                                    || !canBreed(first, worldTime)
+                                    || !canBreed(second, worldTime)
+                                    || distanceSquared(first, second) > BREEDING_RADIUS_SQ)
+                            {
+                                continue;
+                            }
+
+                            first.consumeHunger(BREEDING_HUNGER_COST);
+                            second.consumeHunger(BREEDING_HUNGER_COST);
+                            first.setGrowingAge((int) BREEDING_COOLDOWN);
+                            second.setGrowingAge((int) BREEDING_COOLDOWN);
+                            first.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
+                            second.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
+
+                            EntityData offspring = EntityData.createVirtualOffspring(
+                                    first, second, worldTime);
+                            entities.put(offspring.getId(), offspring);
+                            virtualCount++;
+                            births++;
+                            paired = true;
+                            break;
+                        }
+                    }
                 }
-
-                first.consumeHunger(BREEDING_HUNGER_COST);
-                second.consumeHunger(BREEDING_HUNGER_COST);
-                // Mirror vanilla's post-breeding age as well as the persisted
-                // A-Life cooldown, so both systems agree when the chunk reloads.
-                first.setGrowingAge((int) BREEDING_COOLDOWN);
-                second.setGrowingAge((int) BREEDING_COOLDOWN);
-                first.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
-                second.setBreedingCooldownUntil(worldTime + BREEDING_COOLDOWN);
-
-                EntityData offspring = EntityData.createVirtualOffspring(first, second, worldTime);
-                entities.put(offspring.getId(), offspring);
-                virtualCount++;
-                births++;
-                break;
             }
+        }
+    }
+
+    /**
+     * Spatial bucket for offline breeding. Species, dimension and diet are part
+     * of the key, so incompatible animals are never compared.
+     */
+    private static final class BreedingCell
+    {
+        private final int dimension;
+        private final String entityType;
+        private final AnimalDiet diet;
+        private final int x;
+        private final int y;
+        private final int z;
+
+        private BreedingCell(int dimension, String entityType, AnimalDiet diet,
+                             int x, int y, int z)
+        {
+            this.dimension = dimension;
+            this.entityType = entityType;
+            this.diet = diet;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        private static BreedingCell from(EntityData data)
+        {
+            return new BreedingCell(data.getDimension(), data.getEntityType(),
+                    data.getDiet(), floorCell(data.getX()), floorCell(data.getY()),
+                    floorCell(data.getZ()));
+        }
+
+        private BreedingCell offset(int dx, int dy, int dz)
+        {
+            return new BreedingCell(dimension, entityType, diet,
+                    x + dx, y + dy, z + dz);
+        }
+
+        private static int floorCell(double coordinate)
+        {
+            return (int) Math.floor(coordinate / 8.0D);
+        }
+
+        @Override
+        public boolean equals(Object object)
+        {
+            if (this == object)
+            {
+                return true;
+            }
+            if (!(object instanceof BreedingCell))
+            {
+                return false;
+            }
+
+            BreedingCell other = (BreedingCell) object;
+            return dimension == other.dimension && x == other.x && y == other.y
+                    && z == other.z && entityType.equals(other.entityType)
+                    && diet == other.diet;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = dimension;
+            result = 31 * result + entityType.hashCode();
+            result = 31 * result + (diet == null ? 0 : diet.hashCode());
+            result = 31 * result + x;
+            result = 31 * result + y;
+            result = 31 * result + z;
+            return result;
         }
     }
 
