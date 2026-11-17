@@ -101,8 +101,7 @@ public final class AnimalForagingBehavior
         @Override
         public boolean shouldContinueExecuting()
         {
-            return canForage() && isValidTarget(target)
-                    && animal.getDistanceSq(target) > EAT_DISTANCE_SQ;
+            return canForage() && isValidTarget(target);
         }
 
         @Override
