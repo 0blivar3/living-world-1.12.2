@@ -395,24 +395,6 @@ public class EntityData
     public boolean isVirtual() { return virtual; }
     public void setVirtual(boolean virtual) { this.virtual = virtual; }
 
-    public static EntityData createVirtualOffspring(EntityData parent, long worldTime)
-    {
-        EntityData child = new EntityData(UUID.randomUUID(), parent.entityType);
-        child.dimension = parent.dimension;
-        child.x = parent.x;
-        child.y = parent.y;
-        child.z = parent.z;
-        child.health = 10.0F;
-        child.animal = true;
-        child.diet = parent.diet;
-        child.hunger = 75;
-        child.growingAge = -24000;
-        child.virtual = true;
-        child.loaded = false;
-        child.lastUpdateWorldTime = worldTime;
-        child.lastSimulationWorldTime = worldTime;
-        return child;
-    }
     public String getVillagerActivity() { return villagerActivity; }
     public int getVillagerProfession() { return villagerProfession; }
     public boolean hasHome() { return hasHome; }
