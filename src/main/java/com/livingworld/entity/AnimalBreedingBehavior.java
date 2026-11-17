@@ -15,7 +15,7 @@ public final class AnimalBreedingBehavior
     private static final int SEARCH_RADIUS = 8;
     private static final int MIN_HUNGER = 75;
     private static final int HUNGER_COST = 25;
-    private static final long BREEDING_COOLDOWN = 6000L;
+    private static final long BREEDING_COOLDOWN = 24000L;
     private static final String LAST_BREEDING_KEY = "LivingWorldLastBreeding";
     private static final String LAST_SEARCH_KEY = "LivingWorldLastBreedSearch";
 
