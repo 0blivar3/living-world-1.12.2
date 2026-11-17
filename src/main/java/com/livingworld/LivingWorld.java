@@ -1,6 +1,5 @@
 package com.livingworld;
 
-import net.minecraft.init.Blocks;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
@@ -32,6 +31,5 @@ public class LivingWorld
         MinecraftForge.EVENT_BUS.register(alifeManager);
 
         logger.info("Living World initialized.");
-        logger.info("DIRT BLOCK >> {}", Blocks.DIRT.getRegistryName());
     }
 }
