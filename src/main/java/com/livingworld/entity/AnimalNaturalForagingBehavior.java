@@ -186,6 +186,13 @@ public final class AnimalNaturalForagingBehavior
                 {
                     for (int z = -SEARCH_RADIUS; z <= SEARCH_RADIUS; z++)
                     {
+                        // Ignore the corners of the search square; they are
+                        // outside the actual circular foraging radius.
+                        if (x * x + z * z > SEARCH_RADIUS * SEARCH_RADIUS)
+                        {
+                            continue;
+                        }
+
                         BlockPos candidate = origin.add(x, y, z);
                         if (!animal.world.isBlockLoaded(candidate)
                                 || !isFood(animal, animal.world.getBlockState(candidate)))
