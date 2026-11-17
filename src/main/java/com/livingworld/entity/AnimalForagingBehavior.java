@@ -21,7 +21,7 @@ import java.util.WeakHashMap;
  */
 public final class AnimalForagingBehavior
 {
-    private static final double SEARCH_RADIUS = 10.0D;
+    private static final double SEARCH_RADIUS = 8.0D;
     private static final double EAT_DISTANCE_SQ = 2.25D;
     private static final int HUNGER_THRESHOLD = 75;
     private static final int FOOD_VALUE = 30;
@@ -84,6 +84,7 @@ public final class AnimalForagingBehavior
         {
             this.animal = animal;
             this.data = data;
+            this.searchCooldown = Math.floorMod(animal.getUniqueID().hashCode(), 60);
             setMutexBits(1);
         }
 
@@ -102,7 +103,7 @@ public final class AnimalForagingBehavior
                 return false;
             }
 
-            searchCooldown = 20;
+            searchCooldown = 60;
             target = findFood();
             return target != null;
         }
