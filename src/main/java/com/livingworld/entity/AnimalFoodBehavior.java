@@ -1,22 +1,27 @@
 package com.livingworld.entity;
 
-import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.ai.EntityAIBase;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
+
 /**
- * Basic foraging behavior for herbivores in loaded chunks.
- *
- * Food is only searched for around already-loaded animals. This class never
- * force-loads chunks and does not create entities for offline simulation.
+ * Grass foraging task for herbivores. Navigation is owned by the AI scheduler
+ * instead of being overwritten by the periodic entity tracker.
  */
 public final class AnimalFoodBehavior
 {
     private static final int SEARCH_RADIUS = 8;
     private static final int HUNGER_THRESHOLD = 75;
     private static final int FOOD_VALUE = 30;
+    private static final double EAT_DISTANCE_SQ = 2.25D;
+    private static final Set<EntityAnimal> INSTALLED =
+            Collections.newSetFromMap(new WeakHashMap<EntityAnimal, Boolean>());
 
     private AnimalFoodBehavior()
     {
@@ -25,76 +30,157 @@ public final class AnimalFoodBehavior
     public static void update(EntityAnimal animal, EntityData data, World world)
     {
         if (animal == null || data == null || world == null || world.isRemote
-                || !animal.isEntityAlive()
-                || data.getDiet() != AnimalDiet.HERBIVORE
-                || data.getHunger() >= HUNGER_THRESHOLD)
+                || !animal.isEntityAlive() || data.getDiet() != AnimalDiet.HERBIVORE)
         {
             return;
         }
 
-        BlockPos food = findGrass(animal, world);
-        if (food == null)
+        if (INSTALLED.add(animal))
         {
-            return;
+            animal.tasks.addTask(4, new GrassForageTask(animal, data));
         }
-
-        double dx = food.getX() + 0.5D - animal.posX;
-        double dz = food.getZ() + 0.5D - animal.posZ;
-        double distanceSq = dx * dx + dz * dz;
-
-        if (distanceSq <= 2.25D
-                && Math.abs(animal.posY - (food.getY() + 1.0D)) <= 2.0D)
-        {
-            IBlockState state = world.getBlockState(food);
-            if (state.getBlock() == Blocks.GRASS)
-            {
-                world.setBlockState(food, Blocks.DIRT.getDefaultState(), 2);
-                data.feed(FOOD_VALUE);
-                animal.getNavigator().clearPath();
-            }
-            return;
-        }
-
-        animal.getNavigator().tryMoveToXYZ(
-                food.getX() + 0.5D,
-                food.getY() + 1.0D,
-                food.getZ() + 0.5D,
-                1.0D);
     }
 
-    private static BlockPos findGrass(EntityAnimal animal, World world)
+    private static final class GrassForageTask extends EntityAIBase
     {
-        BlockPos origin = animal.getPosition();
-        BlockPos best = null;
-        double bestDistance = Double.MAX_VALUE;
+        private final EntityAnimal animal;
+        private final EntityData data;
+        private BlockPos target;
+        private int searchCooldown;
 
-        for (int x = -SEARCH_RADIUS; x <= SEARCH_RADIUS; x++)
+        private GrassForageTask(EntityAnimal animal, EntityData data)
         {
-            for (int y = -2; y <= 2; y++)
+            this.animal = animal;
+            this.data = data;
+            setMutexBits(1);
+        }
+
+        @Override
+        public boolean shouldExecute()
+        {
+            if (!canForage())
             {
-                for (int z = -SEARCH_RADIUS; z <= SEARCH_RADIUS; z++)
+                searchCooldown = 0;
+                return false;
+            }
+
+            if (searchCooldown > 0)
+            {
+                searchCooldown--;
+                return false;
+            }
+
+            searchCooldown = 100;
+            target = findGrass();
+            return target != null;
+        }
+
+        @Override
+        public boolean shouldContinueExecuting()
+        {
+            return canForage() && isValidGrass(target);
+        }
+
+        @Override
+        public void startExecuting()
+        {
+            moveToGrass();
+        }
+
+        @Override
+        public void updateTask()
+        {
+            if (!isValidGrass(target))
+            {
+                target = null;
+                animal.getNavigator().clearPath();
+                return;
+            }
+
+            if (animal.getDistanceSq(target.getX() + 0.5D, target.getY() + 1.0D,
+                    target.getZ() + 0.5D) <= EAT_DISTANCE_SQ)
+            {
+                World world = animal.world;
+                if (world.isBlockLoaded(target)
+                        && world.getBlockState(target).getBlock() == Blocks.GRASS)
                 {
-                    BlockPos candidate = origin.add(x, y, z);
-                    if (!world.isBlockLoaded(candidate)
-                            || world.getBlockState(candidate).getBlock() != Blocks.GRASS)
-                    {
-                        continue;
-                    }
+                    world.setBlockState(target, Blocks.DIRT.getDefaultState(), 2);
+                    data.feed(FOOD_VALUE);
+                }
+                target = null;
+                animal.getNavigator().clearPath();
+                return;
+            }
 
-                    double dx = candidate.getX() + 0.5D - animal.posX;
-                    double dy = candidate.getY() + 1.0D - animal.posY;
-                    double dz = candidate.getZ() + 0.5D - animal.posZ;
-                    double distance = dx * dx + dy * dy + dz * dz;
+            if (animal.getNavigator().noPath())
+            {
+                moveToGrass();
+            }
+        }
 
-                    if (distance < bestDistance)
+        @Override
+        public void resetTask()
+        {
+            target = null;
+            animal.getNavigator().clearPath();
+        }
+
+        private boolean canForage()
+        {
+            return animal.isEntityAlive() && data.getHunger() < HUNGER_THRESHOLD
+                    && !animal.isInLove() && !animal.isBurning()
+                    && animal.getAttackTarget() == null;
+        }
+
+        private boolean isValidGrass(BlockPos pos)
+        {
+            return pos != null && animal.world.isBlockLoaded(pos)
+                    && animal.world.getBlockState(pos).getBlock() == Blocks.GRASS;
+        }
+
+        private BlockPos findGrass()
+        {
+            BlockPos origin = animal.getPosition();
+            BlockPos nearest = null;
+            double nearestDistance = SEARCH_RADIUS * SEARCH_RADIUS;
+
+            for (int x = -SEARCH_RADIUS; x <= SEARCH_RADIUS; x++)
+            {
+                for (int y = -2; y <= 2; y++)
+                {
+                    for (int z = -SEARCH_RADIUS; z <= SEARCH_RADIUS; z++)
                     {
-                        bestDistance = distance;
-                        best = candidate;
+                        BlockPos candidate = origin.add(x, y, z);
+                        if (!animal.world.isBlockLoaded(candidate)
+                                || animal.world.getBlockState(candidate).getBlock() != Blocks.GRASS)
+                        {
+                            continue;
+                        }
+
+                        double distance = animal.getDistanceSq(
+                                candidate.getX() + 0.5D,
+                                candidate.getY() + 1.0D,
+                                candidate.getZ() + 0.5D);
+                        if (distance < nearestDistance)
+                        {
+                            nearestDistance = distance;
+                            nearest = candidate;
+                        }
                     }
                 }
             }
+
+            return nearest;
         }
 
-        return best;
+        private void moveToGrass()
+        {
+            if (target != null)
+            {
+                animal.getNavigator().tryMoveToXYZ(
+                        target.getX() + 0.5D, target.getY() + 1.0D,
+                        target.getZ() + 0.5D, 1.0D);
+            }
+        }
     }
 }
