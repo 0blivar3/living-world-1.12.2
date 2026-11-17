@@ -48,6 +48,7 @@ public class EntityData
 
     private long lastUpdateWorldTime;
     private long lastSimulationWorldTime;
+    private long lastAgeSimulationWorldTime;
     private long lastWorkstationSearchWorldTime = Long.MIN_VALUE;
     private int pendingStarvationDamage;
 
@@ -120,6 +121,7 @@ public class EntityData
         boolean firstUpdate = lastUpdateWorldTime == 0L && lastSimulationWorldTime == 0L;
         this.loaded = true;
         this.lastUpdateWorldTime = worldTime;
+        this.lastAgeSimulationWorldTime = worldTime;
         if (firstUpdate)
         {
             this.lastSimulationWorldTime = worldTime;
@@ -152,24 +154,31 @@ public class EntityData
             return;
         }
 
+        // Age advances continuously, independently of the slower hunger interval.
+        if (lastAgeSimulationWorldTime <= 0L)
+        {
+            lastAgeSimulationWorldTime = lastUpdateWorldTime > 0L
+                    ? lastUpdateWorldTime : lastSimulationWorldTime;
+        }
+        long ageElapsed = Math.max(0L, worldTime - lastAgeSimulationWorldTime);
+        if (!loaded && ageElapsed > 0L)
+        {
+            if (growingAge < 0)
+            {
+                growingAge = (int) Math.min(0L, (long) growingAge + ageElapsed);
+            }
+            else if (growingAge > 0)
+            {
+                growingAge = (int) Math.max(0L, (long) growingAge - ageElapsed);
+            }
+        }
+        lastAgeSimulationWorldTime = worldTime;
+
         long intervals = elapsed / HUNGER_INTERVAL;
 
         if (intervals <= 0)
         {
             return;
-        }
-
-        long simulatedTicks = intervals * HUNGER_INTERVAL;
-        if (!loaded)
-        {
-            if (growingAge < 0)
-            {
-                growingAge = (int) Math.min(0L, growingAge + simulatedTicks);
-            }
-            else if (growingAge > 0)
-            {
-                growingAge = (int) Math.max(0L, growingAge - simulatedTicks);
-            }
         }
 
         long hungerToConsume = Math.min(intervals, hunger);
@@ -325,6 +334,7 @@ public class EntityData
 
         tag.setLong("LastUpdate", lastUpdateWorldTime);
         tag.setLong("LastSimulation", lastSimulationWorldTime);
+        tag.setLong("LastAgeSimulation", lastAgeSimulationWorldTime);
         tag.setLong("LastWorkstationSearch", lastWorkstationSearchWorldTime);
         tag.setInteger("PendingStarvationDamage", pendingStarvationDamage);
         return tag;
@@ -382,6 +392,10 @@ public class EntityData
         data.lastSimulationWorldTime = tag.hasKey("LastSimulation")
                 ? tag.getLong("LastSimulation")
                 : data.lastUpdateWorldTime;
+        data.lastAgeSimulationWorldTime = tag.hasKey("LastAgeSimulation")
+                ? tag.getLong("LastAgeSimulation")
+                : (data.lastUpdateWorldTime > 0L
+                    ? data.lastUpdateWorldTime : data.lastSimulationWorldTime);
         data.lastWorkstationSearchWorldTime = tag.hasKey("LastWorkstationSearch")
                 ? tag.getLong("LastWorkstationSearch") : Long.MIN_VALUE;
         data.pendingStarvationDamage = tag.getInteger("PendingStarvationDamage");
@@ -421,6 +435,28 @@ public class EntityData
     public void setBreedingCooldownUntil(long time) { breedingCooldownUntil = time; }
     public boolean isVirtual() { return virtual; }
     public void setVirtual(boolean virtual) { this.virtual = virtual; }
+
+    public static EntityData createVirtualOffspring(EntityData parent, long worldTime)
+    {
+        EntityData child = new EntityData(UUID.randomUUID(), parent.entityType);
+        child.dimension = parent.dimension;
+        child.x = parent.x;
+        child.y = parent.y;
+        child.z = parent.z;
+        child.health = 10.0F;
+        child.loaded = false;
+        child.animal = true;
+        child.villager = false;
+        child.hunger = 75;
+        child.diet = parent.diet;
+        child.growingAge = -24000;
+        child.breedingCooldownUntil = 0L;
+        child.virtual = true;
+        child.lastUpdateWorldTime = worldTime;
+        child.lastSimulationWorldTime = worldTime;
+        child.lastAgeSimulationWorldTime = worldTime;
+        return child;
+    }
 
     public String getVillagerActivity() { return villagerActivity; }
     public int getVillagerProfession() { return villagerProfession; }
