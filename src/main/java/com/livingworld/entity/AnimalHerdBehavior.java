@@ -30,25 +30,33 @@ public final class AnimalHerdBehavior
         if (animal == null || data == null || herd == null || world == null || world.isRemote
                 || animal.isDead || herd.getMembers().size() < 2) return;
 
-        List<EntityMob> threats = world.getEntitiesWithinAABB(
-                EntityMob.class, animal.getEntityBoundingBox().grow(DANGER_RADIUS));
-        EntityMob nearestThreat = null;
-        double nearestDistance = DANGER_RADIUS * DANGER_RADIUS;
-        for (EntityMob threat : threats)
+        // Threat scans are staggered per animal and run at most once every
+        // 200 ticks, rather than querying nearby mobs on every tracker update.
+        long lastThreatScan = animal.getEntityData().getLong("LivingWorldLastHerdThreatScan");
+        int scanOffset = Math.floorMod(animal.getUniqueID().hashCode(), 200);
+        if (worldTime - lastThreatScan >= 200L + scanOffset)
         {
-            if (threat.isDead) continue;
-            double distance = animal.getDistanceSq(threat);
-            if (distance < nearestDistance)
+            animal.getEntityData().setLong("LivingWorldLastHerdThreatScan", worldTime);
+            List<EntityMob> threats = world.getEntitiesWithinAABB(
+                    EntityMob.class, animal.getEntityBoundingBox().grow(DANGER_RADIUS));
+            EntityMob nearestThreat = null;
+            double nearestDistance = DANGER_RADIUS * DANGER_RADIUS;
+            for (EntityMob threat : threats)
             {
-                nearestDistance = distance;
-                nearestThreat = threat;
+                if (threat.isDead) continue;
+                double distance = animal.getDistanceSq(threat);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestThreat = threat;
+                }
             }
-        }
 
-        if (nearestThreat != null)
-        {
-            herd.raiseAlarm(nearestThreat.posX, nearestThreat.posY, nearestThreat.posZ,
-                    worldTime + ALARM_DURATION);
+            if (nearestThreat != null)
+            {
+                herd.raiseAlarm(nearestThreat.posX, nearestThreat.posY, nearestThreat.posZ,
+                        worldTime + ALARM_DURATION);
+            }
         }
 
         if (herd.isAlarmActive(worldTime))
