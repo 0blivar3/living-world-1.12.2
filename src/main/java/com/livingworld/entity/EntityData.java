@@ -78,6 +78,12 @@ public class EntityData
         if (animal)
         {
             diet = AnimalDiet.fromEntityType(entityType);
+            if (entity.getEntityData().hasKey("LivingWorldLastBreeding"))
+            {
+                long lastBreeding = entity.getEntityData().getLong("LivingWorldLastBreeding");
+                breedingCooldownUntil = Math.max(
+                        breedingCooldownUntil, lastBreeding + 6000L);
+            }
         }
 
         if (entity instanceof EntityVillager)
