@@ -37,6 +37,7 @@ public class EntityTracker
         private ALifeWorldData savedData;
         private long ticksUntilUpdate;
         private long lastHerdUpdateWorldTime = Long.MIN_VALUE;
+        private long lastOfflineBreedingWorldTime = Long.MIN_VALUE;
     }
 
     private final Map<Integer, DimensionState> dimensions = new HashMap<Integer, DimensionState>();
@@ -59,6 +60,10 @@ public class EntityTracker
 
         state.ticksUntilUpdate = UPDATE_INTERVAL;
         long worldTime = world.getTotalWorldTime();
+
+        // Convert virtual offspring only in chunks that are already loaded.
+        OfflineSimulator.materializeVirtualOffspring(world, state.entities.values());
+
         Set<UUID> loadedNow = new HashSet<UUID>();
 
         for (Entity entity : new ArrayList<Entity>(world.loadedEntityList))
@@ -109,11 +114,10 @@ public class EntityTracker
 
             data.setLoaded(false);
 
-            // Virtual offspring from older saves have no real entity to load.
-            // Discard those unsupported records rather than retaining phantom life.
+            // A virtual offspring remains in saved data until its chunk is
+            // naturally loaded and materialization succeeds.
             if (data.isVirtual())
             {
-                iterator.remove();
                 continue;
             }
 
@@ -127,6 +131,13 @@ public class EntityTracker
         }
 
         OfflineSimulator.simulate(state.entities.values(), worldTime);
+
+        if (state.lastOfflineBreedingWorldTime == Long.MIN_VALUE
+                || worldTime - state.lastOfflineBreedingWorldTime >= 1200L)
+        {
+            OfflineSimulator.simulateBreeding(state.entities, worldTime);
+            state.lastOfflineBreedingWorldTime = worldTime;
+        }
 
         if (state.lastHerdUpdateWorldTime == Long.MIN_VALUE
                 || worldTime - state.lastHerdUpdateWorldTime >= HERD_UPDATE_INTERVAL)
