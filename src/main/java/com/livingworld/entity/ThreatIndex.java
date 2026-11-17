@@ -18,6 +18,10 @@ public final class ThreatIndex
     private static final double CELL_SIZE = 16.0D;
     private final Map<Cell, List<EntityMob>> cells = new HashMap<Cell, List<EntityMob>>();
 
+    // Used only for map lookups; it is never inserted into the map.
+    // Reusing it avoids creating a Cell object for every neighboring cell query.
+    private final Cell lookupCell = new Cell(0, 0, 0);
+
     public void clear()
     {
         cells.clear();
@@ -48,7 +52,9 @@ public final class ThreatIndex
         }
 
         int range = (int) Math.ceil(radius / CELL_SIZE);
-        Cell center = Cell.from(origin.posX, origin.posY, origin.posZ);
+        int centerX = (int) Math.floor(origin.posX / CELL_SIZE);
+        int centerY = (int) Math.floor(origin.posY / CELL_SIZE);
+        int centerZ = (int) Math.floor(origin.posZ / CELL_SIZE);
         double radiusSq = radius * radius;
         double nearestSq = radiusSq;
         EntityMob nearest = null;
@@ -59,7 +65,8 @@ public final class ThreatIndex
             {
                 for (int dz = -range; dz <= range; dz++)
                 {
-                    List<EntityMob> bucket = cells.get(center.offset(dx, dy, dz));
+                    List<EntityMob> bucket = cells.get(
+                            lookupCell.set(centerX + dx, centerY + dy, centerZ + dz));
                     if (bucket == null)
                     {
                         continue;
@@ -106,9 +113,12 @@ public final class ThreatIndex
                     (int) Math.floor(z / CELL_SIZE));
         }
 
-        private Cell offset(int dx, int dy, int dz)
+        private Cell set(int x, int y, int z)
         {
-            return new Cell(x + dx, y + dy, z + dz);
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            return this;
         }
 
         @Override
