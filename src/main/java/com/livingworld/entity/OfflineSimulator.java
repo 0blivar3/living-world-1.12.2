@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -160,6 +162,11 @@ public final class OfflineSimulator
 
         int dimension = world.provider.getDimension();
         List<EntityData> snapshot = new ArrayList<EntityData>(entities);
+        Set<UUID> loadedIds = new HashSet<UUID>();
+        for (Entity loadedEntity : world.loadedEntityList)
+        {
+            loadedIds.add(loadedEntity.getUniqueID());
+        }
 
         for (EntityData data : snapshot)
         {
@@ -175,17 +182,7 @@ public final class OfflineSimulator
                 continue;
             }
 
-            boolean alreadyPresent = false;
-            for (Entity loadedEntity : world.loadedEntityList)
-            {
-                if (data.getId().equals(loadedEntity.getUniqueID()))
-                {
-                    alreadyPresent = true;
-                    break;
-                }
-            }
-
-            if (alreadyPresent)
+            if (loadedIds.contains(data.getId()))
             {
                 data.setVirtual(false);
                 continue;
