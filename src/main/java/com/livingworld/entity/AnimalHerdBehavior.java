@@ -25,9 +25,9 @@ public final class AnimalHerdBehavior
 
     private AnimalHerdBehavior() { }
 
-    public static void update(EntityAnimal animal, AnimalHerd herd, World world, long worldTime)
+    public static void update(EntityAnimal animal, EntityData data, AnimalHerd herd, World world, long worldTime)
     {
-        if (animal == null || herd == null || world == null || world.isRemote
+        if (animal == null || data == null || herd == null || world == null || world.isRemote
                 || animal.isDead || herd.getMembers().size() < 2) return;
 
         List<EntityMob> threats = world.getEntitiesWithinAABB(
@@ -59,9 +59,15 @@ public final class AnimalHerdBehavior
 
         // Resting animals stay with the group unless a threat interrupts their rest.
         // The daily routine is checked through the entity's current schedule.
-        if (AnimalDailyRoutine.isRestTime(animal))
+        if (AnimalDailyRoutine.isRestTime(animal) && data.getHunger() >= 75)
         {
             animal.getNavigator().clearPath();
+            return;
+        }
+
+        // Do not replace a route currently owned by a feeding or other AI task.
+        if (!animal.getNavigator().noPath())
+        {
             return;
         }
 
