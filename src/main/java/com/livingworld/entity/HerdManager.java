@@ -206,7 +206,7 @@ public final class HerdManager
 
     private static boolean isHerdAnimal(EntityData data, int dimension)
     {
-        if (data == null || !data.isAnimal() || data.getHealth() <= 0.0F
+        if (data == null || !data.isAnimal() || data.isVirtual() || data.getHealth() <= 0.0F
                 || data.getDimension() != dimension)
         {
             return false;
