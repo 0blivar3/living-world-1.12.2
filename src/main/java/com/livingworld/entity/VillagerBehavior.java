@@ -2,10 +2,8 @@ package com.livingworld.entity;
 
 import net.minecraft.entity.monster.EntityMob;
 import net.minecraft.entity.passive.EntityVillager;
-import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.World;
 
-import java.util.List;
 
 /**
  * Daily schedule and loaded-world behavior for vanilla villagers.
@@ -55,7 +53,7 @@ public final class VillagerBehavior
      * This does not disable vanilla AI: the navigator receives a destination,
      * while vanilla behavior remains responsible for path execution.
      */
-    public static void updateLoadedVillager(EntityVillager villager, EntityData data, World world)
+    public static void updateLoadedVillager(EntityVillager villager, EntityData data, World world, ThreatIndex threats)
     {
         if (villager == null || data == null || world == null || world.isRemote
                 || villager.isDead)
@@ -63,15 +61,8 @@ public final class VillagerBehavior
             return;
         }
 
-        long worldTime = world.getTotalWorldTime();
-        int scanPhase = Math.floorMod(
-                (int) (worldTime / 100L) + villager.getUniqueID().hashCode(), 2);
-        if (scanPhase != 0)
-        {
-            return;
-        }
+        EntityMob threat = threats == null ? null : threats.findNearest(villager, THREAT_RADIUS);
 
-        EntityMob threat = findNearestThreat(villager, world);
         if (threat != null)
         {
             fleeFrom(villager, threat);
@@ -100,33 +91,6 @@ public final class VillagerBehavior
                     data.getHomeZ() + 0.5D,
                     0.7D);
         }
-    }
-
-    private static EntityMob findNearestThreat(EntityVillager villager, World world)
-    {
-        AxisAlignedBB area = villager.getEntityBoundingBox().grow(
-                THREAT_RADIUS, 6.0D, THREAT_RADIUS);
-        List<EntityMob> threats = world.getEntitiesWithinAABB(EntityMob.class, area);
-
-        EntityMob nearest = null;
-        double nearestDistance = THREAT_RADIUS * THREAT_RADIUS;
-
-        for (EntityMob mob : threats)
-        {
-            if (mob.isDead)
-            {
-                continue;
-            }
-
-            double distance = villager.getDistanceSq(mob);
-            if (distance < nearestDistance)
-            {
-                nearestDistance = distance;
-                nearest = mob;
-            }
-        }
-
-        return nearest;
     }
 
     private static void fleeFrom(EntityVillager villager, EntityMob threat)
