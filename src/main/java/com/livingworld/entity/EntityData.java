@@ -48,6 +48,7 @@ public class EntityData
 
     private long lastUpdateWorldTime;
     private long lastSimulationWorldTime;
+    private long lastWorkstationSearchWorldTime = Long.MIN_VALUE;
 
     public EntityData(UUID id, String entityType)
     {
@@ -96,17 +97,22 @@ public class EntityData
                 hasHome = false;
             }
 
-            BlockPos workstation = VillagerWorkstationFinder.findNearest(villagerEntity, world);
-            if (workstation != null)
+            if (lastWorkstationSearchWorldTime == Long.MIN_VALUE
+                    || worldTime - lastWorkstationSearchWorldTime >= 1200L)
             {
-                hasWorkstation = true;
-                workstationX = workstation.getX();
-                workstationY = workstation.getY();
-                workstationZ = workstation.getZ();
-            }
-            else
-            {
-                hasWorkstation = false;
+                BlockPos workstation = VillagerWorkstationFinder.findNearest(villagerEntity, world);
+                if (workstation != null)
+                {
+                    hasWorkstation = true;
+                    workstationX = workstation.getX();
+                    workstationY = workstation.getY();
+                    workstationZ = workstation.getZ();
+                }
+                else
+                {
+                    hasWorkstation = false;
+                }
+                lastWorkstationSearchWorldTime = worldTime;
             }
         }
 
@@ -153,20 +159,25 @@ public class EntityData
         }
 
         long simulatedTicks = intervals * HUNGER_INTERVAL;
-        if (growingAge < 0)
+        if (!loaded)
         {
-            growingAge = (int) Math.min(0L, growingAge + simulatedTicks);
-        }
-        else if (growingAge > 0)
-        {
-            growingAge = (int) Math.max(0L, growingAge - simulatedTicks);
+            if (growingAge < 0)
+            {
+                growingAge = (int) Math.min(0L, growingAge + simulatedTicks);
+            }
+            else if (growingAge > 0)
+            {
+                growingAge = (int) Math.max(0L, growingAge - simulatedTicks);
+            }
         }
 
         long hungerToConsume = Math.min(intervals, hunger);
         hunger -= (int) hungerToConsume;
 
+        // Loaded animals retain vanilla age and health handling. Offline health
+        // loss is applied only when the entity is materialized again.
         long starvingIntervals = intervals - hungerToConsume;
-        if (starvingIntervals > 0)
+        if (!loaded && starvingIntervals > 0)
         {
             health = Math.max(0.0F, health - (float) starvingIntervals);
         }
@@ -178,9 +189,19 @@ public class EntityData
      * Applies the simulated health to the real entity when it is loaded again.
      * Returns false when the offline simulation has killed the entity.
      */
-    public boolean applyOfflineState(Entity entity)
+    public boolean applyOfflineState(Entity entity, boolean wasOffline)
     {
-        if (!animal || !(entity instanceof EntityLivingBase))
+        if (!animal)
+        {
+            return true;
+        }
+
+        if (wasOffline && entity instanceof EntityAgeable)
+        {
+            ((EntityAgeable) entity).setGrowingAge(growingAge);
+        }
+
+        if (!wasOffline || !(entity instanceof EntityLivingBase))
         {
             return true;
         }
@@ -194,8 +215,7 @@ public class EntityData
             return false;
         }
 
-        float appliedHealth = Math.min(health, living.getMaxHealth());
-        living.setHealth(appliedHealth);
+        living.setHealth(Math.min(health, living.getMaxHealth()));
         return true;
     }
 
@@ -280,6 +300,7 @@ public class EntityData
 
         tag.setLong("LastUpdate", lastUpdateWorldTime);
         tag.setLong("LastSimulation", lastSimulationWorldTime);
+        tag.setLong("LastWorkstationSearch", lastWorkstationSearchWorldTime);
         return tag;
     }
 
@@ -335,6 +356,8 @@ public class EntityData
         data.lastSimulationWorldTime = tag.hasKey("LastSimulation")
                 ? tag.getLong("LastSimulation")
                 : data.lastUpdateWorldTime;
+        data.lastWorkstationSearchWorldTime = tag.hasKey("LastWorkstationSearch")
+                ? tag.getLong("LastWorkstationSearch") : Long.MIN_VALUE;
         return data;
     }
 
