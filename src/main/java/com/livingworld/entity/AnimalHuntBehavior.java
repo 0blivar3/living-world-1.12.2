@@ -27,7 +27,6 @@ public final class AnimalHuntBehavior
     private static final long ATTACK_COOLDOWN = 100L;
     private static final int FOOD_REWARD = 40;
     private static final String LAST_ATTACK_KEY = "LivingWorldLastHunt";
-    private static final String LAST_SEARCH_KEY = "LivingWorldLastHuntSearch";
 
     private AnimalHuntBehavior()
     {
@@ -48,13 +47,6 @@ public final class AnimalHuntBehavior
         {
             return;
         }
-
-        long lastSearch = predator.getEntityData().getLong(LAST_SEARCH_KEY);
-        if (worldTime - lastSearch < 200L)
-        {
-            return;
-        }
-        predator.getEntityData().setLong(LAST_SEARCH_KEY, worldTime);
 
         AxisAlignedBB searchBox = predator.getEntityBoundingBox().grow(SEARCH_RADIUS);
         List<EntityAnimal> nearby = world.getEntitiesWithinAABB(EntityAnimal.class, searchBox);
